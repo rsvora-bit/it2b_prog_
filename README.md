@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 💡 Tento repozitář slouží hlavně pro **školní projekty a trénink v jazyce C**.
 =======
 
