@@ -1,17 +1,23 @@
 #include <stdio.h>
 
 int main() {
-    char str[100];  
 
-    printf("Zadejte slovo: ");
-    scanf("%s", str);  
+    printf("Zadej slovo: ");
+    char slovo[10];
+    scanf("%s", &slovo);
 
-    for (int i = 1; str[i] != '\0'; i += 2) {  
-        str[i] = '#';  
+    printf("Kolikrat chces string opakovat? ");
+    int opakovani;
+    scanf("%d", &opakovani);
+
+    if (opakovani <= 0) {
+        printf("Zadal jsi spatnou hodnotu!!!");
+        return 1; //chyba 
     }
 
-
-    printf("Vycenzurovany retezec: %s\n", str);
+    for (int i = 0; i < opakovani; i++) {
+        printf("Zadany string: %s\n", slovo);
+    }
 
     return 0;
 }
