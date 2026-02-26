@@ -22,6 +22,6 @@ class Program
         else if (op == '/')
             vysledek = a / b;
 
-        Console.WriteLine("Výsledek je: " + vysledek);
+        Console.WriteLine($"Výsledek je: " + vysledek);
     }
 }
