@@ -1,0 +1,3798 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!--
+    FARKEN'S WORLD - STABLE MAP FIX
+    Tahle verze opravuje létající objekty tím, že mapa je stabilní a rovná.
+    Všechny objekty jsou stavěné od země nahoru a pokládají se přes placeOnGround().
+  -->
+  <title>Farken's World - Stable Map</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #06111f;
+      color: white;
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    :root {
+      --panel: rgba(13, 24, 43, 0.86);
+      --line: rgba(255, 255, 255, 0.13);
+      --accent: #f5b022;
+      --soft: #cdd7e7;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, rgba(83, 119, 179, 0.25), rgba(3, 7, 18, 0.96));
+    }
+
+    .window {
+      width: min(1080px, 94vw);
+      max-height: 90vh;
+      overflow: auto;
+      background: linear-gradient(180deg, rgba(18, 30, 54, 0.96), rgba(8, 15, 30, 0.98));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.55);
+      padding: 28px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 54px;
+      letter-spacing: 1px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      color: #ffd062;
+      font-weight: normal;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      color: #ffd062;
+    }
+
+    p {
+      margin: 0 0 12px;
+      color: var(--soft);
+      line-height: 1.5;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 8px 12px;
+      background: rgba(245, 176, 34, 0.14);
+      border: 1px solid rgba(245, 176, 34, 0.26);
+      border-radius: 999px;
+      margin: 4px 6px 0 0;
+      color: #ffe6aa;
+      font-size: 14px;
+    }
+
+    .controlsGrid,
+    .contentGrid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .control {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+    }
+
+    .control b {
+      color: #fff0b8;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(135deg, #ffb83d, #8d4a03);
+    }
+
+    .btnRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .smallBtn {
+      background: linear-gradient(135deg, #334155, #1f2937);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    .smallBtn.active {
+      background: linear-gradient(135deg, #f5b022, #8d4a03);
+    }
+
+    .panel {
+      position: fixed;
+      z-index: 10;
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(8px);
+    }
+
+    #compass {
+      left: 50%;
+      top: 12px;
+      transform: translateX(-50%);
+      width: min(680px, 58vw);
+      height: 40px;
+      overflow: hidden;
+    }
+
+    #compassStrip {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #d4dfec;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    #compassText {
+      position: absolute;
+      left: 50%;
+      top: 8px;
+      transform: translateX(-50%);
+      font-weight: bold;
+      background: rgba(15, 23, 42, 0.95);
+      padding: 2px 10px;
+      border-radius: 999px;
+    }
+
+    #compassCenter {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+      width: 3px;
+      height: 100%;
+      background: #f5b022;
+      box-shadow: 0 0 14px rgba(245, 176, 34, 0.8);
+    }
+
+    #miniMapPanel {
+      right: 14px;
+      top: 14px;
+      padding: 8px;
+      width: 190px;
+      height: 190px;
+    }
+
+    #miniMapCanvas {
+      width: 174px;
+      height: 174px;
+      border-radius: 14px;
+      background: #0f172a;
+      border: 1px solid var(--line);
+    }
+
+    #vitalsRust {
+      right: 18px;
+      bottom: 82px;
+      width: 188px;
+      padding: 10px;
+      background: rgba(9, 16, 30, 0.68);
+    }
+
+    .vitalRow {
+      display: grid;
+      grid-template-columns: 28px 1fr 36px;
+      align-items: center;
+      gap: 8px;
+      margin: 7px 0;
+      font-size: 13px;
+    }
+
+    .vitalIcon {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .vitalMiniBar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .vitalMiniBar > div {
+      height: 100%;
+      width: 100%;
+    }
+
+    #vitalHp {
+      background: linear-gradient(90deg, #d65a2e, #ff9a3c);
+    }
+
+    #vitalFood {
+      background: linear-gradient(90deg, #4f8f2f, #a4d34a);
+    }
+
+    #vitalWater {
+      background: linear-gradient(90deg, #38bdf8, #2563eb);
+    }
+
+    #targetPanel {
+      left: 50%;
+      top: 62px;
+      transform: translateX(-50%);
+      min-width: 350px;
+      text-align: center;
+      padding: 10px 14px;
+    }
+
+    #targetName {
+      font-weight: bold;
+    }
+
+    #targetText {
+      font-size: 13px;
+      color: #ced8e8;
+    }
+
+    .bar {
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.10);
+      margin: 5px 0 8px;
+    }
+
+    .bar > div {
+      height: 100%;
+      width: 100%;
+    }
+
+    #targetBar {
+      background: linear-gradient(90deg, #4ade80, #eab308, #ef4444);
+    }
+
+    #centerMessage {
+      left: 50%;
+      bottom: 114px;
+      transform: translateX(-50%);
+      padding: 10px 16px;
+      border-radius: 999px;
+      max-width: min(80vw, 860px);
+      text-align: center;
+    }
+
+    #helpPanel {
+      right: 14px;
+      bottom: 14px;
+      padding: 10px 14px;
+      color: #d8e3f2;
+      font-size: 13px;
+    }
+
+    #resourceFeed {
+      right: 14px;
+      top: 214px;
+      width: 230px;
+      padding: 8px;
+      pointer-events: none;
+    }
+
+    .feedItem {
+      color: white;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      padding: 7px 9px;
+      margin: 6px 0;
+      font-weight: bold;
+      animation: feedOut 2.7s ease forwards;
+    }
+
+    @keyframes feedOut {
+      0% {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      12% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      78% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+    }
+
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      z-index: 12;
+      pointer-events: none;
+      display: none;
+    }
+
+    #crosshair:before,
+    #crosshair:after {
+      content: "";
+      position: absolute;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+    }
+
+    #crosshair:before {
+      left: 10px;
+      top: 0;
+      width: 2px;
+      height: 22px;
+    }
+
+    #crosshair:after {
+      left: 0;
+      top: 10px;
+      width: 22px;
+      height: 2px;
+    }
+
+    #hitMarker {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 56px;
+      height: 56px;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      z-index: 13;
+      pointer-events: none;
+    }
+
+    #hitMarker.active {
+      animation: hitFlash 0.18s ease;
+    }
+
+    @keyframes hitFlash {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.66);
+      }
+
+      55% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.18);
+      }
+    }
+
+    .hitLine {
+      position: absolute;
+      width: 16px;
+      height: 3px;
+      background: white;
+      box-shadow: 0 0 7px white;
+    }
+
+    .hitLine:nth-child(1) {
+      left: 6px;
+      top: 9px;
+      transform: rotate(45deg);
+    }
+
+    .hitLine:nth-child(2) {
+      right: 6px;
+      top: 9px;
+      transform: rotate(-45deg);
+    }
+
+    .hitLine:nth-child(3) {
+      left: 6px;
+      bottom: 9px;
+      transform: rotate(-45deg);
+    }
+
+    .hitLine:nth-child(4) {
+      right: 6px;
+      bottom: 9px;
+      transform: rotate(45deg);
+    }
+
+    #hotbar {
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      padding: 8px;
+      white-space: nowrap;
+    }
+
+    .slot {
+      width: 75px;
+      height: 78px;
+      margin: 0 4px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      position: relative;
+      background: rgba(10, 18, 35, 0.95);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .slot.active {
+      border-color: #ffd062;
+      box-shadow: 0 0 18px rgba(245, 176, 34, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .slot .key {
+      position: absolute;
+      left: 7px;
+      top: 5px;
+      font-size: 11px;
+      color: #cad5e5;
+    }
+
+    .slot .emoji {
+      font-size: 30px;
+      margin-bottom: 4px;
+    }
+
+    .slot .name {
+      font-size: 11px;
+      color: #eef3fb;
+    }
+
+    #inventoryOverlay,
+    #mapOverlay,
+    #settingsOverlay,
+    #pauseOverlay {
+      display: none;
+    }
+
+    .listGrid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .itemCard {
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 14px;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+    }
+
+    .itemIcon {
+      width: 48px;
+      text-align: center;
+      font-size: 40px;
+    }
+
+    .itemCard strong {
+      display: block;
+      font-size: 17px;
+    }
+
+    .itemCard span {
+      font-size: 14px;
+      color: var(--soft);
+      line-height: 1.4;
+    }
+
+    .itemCard.clickable {
+      cursor: pointer;
+    }
+
+    .itemCard.clickable:hover {
+      border-color: rgba(245, 176, 34, 0.45);
+      background: rgba(245, 176, 34, 0.08);
+    }
+
+    .itemCard.disabled {
+      opacity: 0.66;
+    }
+
+    #bigMapCanvas {
+      display: block;
+      width: min(760px, 86vw);
+      height: min(760px, 68vh);
+      margin: 0 auto;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #07111f;
+      cursor: crosshair;
+    }
+
+    .bindRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .bindKey {
+      min-width: 120px;
+      text-align: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(10, 18, 35, 0.9);
+      border: 1px solid var(--line);
+      color: #ffd062;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #errorBox {
+      display: none;
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      z-index: 120;
+      max-width: 820px;
+      padding: 14px 16px;
+      background: rgba(127, 29, 29, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- HLAVNÍ MENU -->
+  <div id="mainMenu" class="overlay">
+    <div class="window">
+      <div class="hero">
+        <div class="card">
+          <h1>Farken's World</h1>
+          <h2>Stable Map verze bez levitujících struktur</h2>
+
+          <p>
+            Tahle verze opravuje létající věci tím, že mapa je stabilní.
+            Stromy, kameny, ore, bedny a budovy se generují na pevné zemi.
+          </p>
+
+          <div>
+            <span class="pill">fix létajících objektů</span>
+            <span class="pill">stabilní mapa</span>
+            <span class="pill">loot bedny</span>
+            <span class="pill">žízeň + voda</span>
+            <span class="pill">skok</span>
+            <span class="pill">mapa + waypoint</span>
+          </div>
+
+          <div class="controlsGrid">
+            <div class="control"><b>W A S D</b><br>pohyb</div>
+            <div class="control"><b>Myš</b><br>rozhlížení</div>
+            <div class="control"><b>LPM</b><br>těžení / hit</div>
+            <div class="control"><b>E</b><br>otevřít bednu / pít vodu</div>
+            <div class="control"><b>Space</b><br>skok</div>
+            <div class="control"><b>1–5</b><br>nástroje</div>
+            <div class="control"><b>Tab / I</b><br>inventář</div>
+            <div class="control"><b>M / O / ESC</b><br>mapa / nastavení / pauza</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Rychlé nastavení</h3>
+          <p>Efekty můžeš později změnit i přes O.</p>
+
+          <div class="btnRow">
+            <button class="smallBtn active" id="menuShaderBtn">Shadery: zapnuto</button>
+            <button class="smallBtn active" id="menuFogBtn">Mlha: zapnuto</button>
+            <button class="smallBtn active" id="menuShadowBtn">Stíny: zapnuto</button>
+          </div>
+
+          <div class="btnRow" style="margin-top:20px;">
+            <button id="startBtn">Spustit Farken's World</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUZA -->
+  <div id="pauseOverlay" class="overlay">
+    <div class="window" style="max-width:760px;">
+      <h1 style="font-size:42px;">Pauza</h1>
+      <h2>hra je zastavená</h2>
+      <p>Hlad, žízeň, den/noc ani damage neběží.</p>
+
+      <div class="btnRow">
+        <button id="resumeBtn">Pokračovat</button>
+        <button id="pauseSettingsBtn" class="smallBtn">Nastavení</button>
+        <button id="pauseInventoryBtn" class="smallBtn">Inventář</button>
+        <button id="pauseMapBtn" class="smallBtn">Mapa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTÁŘ -->
+  <div id="inventoryOverlay" class="overlay">
+    <div class="window">
+      <h1 style="font-size:34px;">Inventář + crafting</h1>
+      <h2>zavři přes Tab nebo I</h2>
+
+      <div class="contentGrid">
+        <div>
+          <h3>Suroviny a itemy</h3>
+          <div id="inventoryGrid" class="listGrid"></div>
+        </div>
+
+        <div>
+          <h3>Crafting</h3>
+          <div id="craftingGrid" class="listGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div id="mapOverlay" class="overlay">
+    <div class="window">
+      <h1 style="font-size:34px;">Mapa ostrova</h1>
+      <h2>Kolečko myši = zoom | klik = waypoint | pravé tlačítko = smazat waypoint | M zavře mapu</h2>
+      <canvas id="bigMapCanvas" width="760" height="760"></canvas>
+    </div>
+  </div>
+
+  <!-- NASTAVENÍ -->
+  <div id="settingsOverlay" class="overlay">
+    <div class="window">
+      <h1 style="font-size:34px;">Nastavení</h1>
+      <h2>zavři přes O</h2>
+
+      <div class="contentGrid">
+        <div class="card">
+          <h3>Grafika</h3>
+          <p>Zapni nebo vypni efekty za běhu hry.</p>
+
+          <div class="btnRow">
+            <button class="smallBtn" id="shaderBtn">Shadery</button>
+            <button class="smallBtn" id="fogBtn">Mlha</button>
+            <button class="smallBtn" id="shadowBtn">Stíny</button>
+            <button class="smallBtn" id="minimapBtn">Minimapa</button>
+            <button class="smallBtn" id="compassBtn">Kompas</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Klávesy</h3>
+          <p id="bindInfo">Klikni na klávesu a pak stiskni novou.</p>
+          <div id="keybindGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KOMPAS -->
+  <div id="compass" class="panel">
+    <div id="compassStrip">W&nbsp;&nbsp;&nbsp;NW&nbsp;&nbsp;&nbsp;N&nbsp;&nbsp;&nbsp;NE&nbsp;&nbsp;&nbsp;E</div>
+    <div id="compassCenter"></div>
+    <div id="compassText">N 0°</div>
+  </div>
+
+  <!-- MINIMAPA -->
+  <div id="miniMapPanel" class="panel">
+    <canvas id="miniMapCanvas" width="174" height="174"></canvas>
+  </div>
+
+  <!-- TARGET PANEL -->
+  <div id="targetPanel" class="panel">
+    <div id="targetName">-</div>
+    <div id="targetText">HP: -</div>
+    <div class="bar"><div id="targetBar"></div></div>
+  </div>
+
+  <!-- RESOURCE FEED -->
+  <div id="resourceFeed" class="panel"></div>
+
+  <!-- RUST-LIKE VITALS -->
+  <div id="vitalsRust" class="panel">
+    <div class="vitalRow">
+      <div class="vitalIcon">❤</div>
+      <div class="vitalMiniBar"><div id="vitalHp"></div></div>
+      <div id="vitalHpText">100</div>
+    </div>
+
+    <div class="vitalRow">
+      <div class="vitalIcon">🍗</div>
+      <div class="vitalMiniBar"><div id="vitalFood"></div></div>
+      <div id="vitalFoodText">100</div>
+    </div>
+
+    <div class="vitalRow">
+      <div class="vitalIcon">💧</div>
+      <div class="vitalMiniBar"><div id="vitalWater"></div></div>
+      <div id="vitalWaterText">100</div>
+    </div>
+  </div>
+
+  <div id="centerMessage" class="panel">Klikni do hry a začni hrát</div>
+
+  <div id="helpPanel" class="panel">
+    LPM = těžit | E = otevřít/pít | Space = skok | 1–5 = nástroje | Tab/I = inventář | M = mapa | O = nastavení | ESC = pauza
+  </div>
+
+  <div id="crosshair"></div>
+
+  <div id="hitMarker">
+    <div class="hitLine"></div>
+    <div class="hitLine"></div>
+    <div class="hitLine"></div>
+    <div class="hitLine"></div>
+  </div>
+
+  <div id="hotbar" class="panel"></div>
+  <div id="errorBox"></div>
+
+  <!-- Three.js knihovna -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+    /*
+      =====================================================
+      FARKEN'S WORLD - STABLE MAP JAVASCRIPT
+      Hlavní fix:
+      terrainHeight() = 0
+      placeOnGround() = pevné položení na zem
+      žádné bounding box posuny
+      žádné kopce, které rozbíjely pozice objektů
+      =====================================================
+    */
+
+    window.addEventListener("error", function (e) {
+      const box = document.getElementById("errorBox");
+      box.style.display = "block";
+      box.innerHTML =
+        "<b>Chyba ve hře:</b><br>" +
+        e.message +
+        "<br>Řádek: " +
+        e.lineno +
+        "<br>Zkus Live Server + Ctrl+F5.";
+    });
+
+    const WORLD_SIZE = 520;
+    const HALF_WORLD = WORLD_SIZE / 2;
+    const ISLAND_RADIUS = 220;
+    const EYE_HEIGHT = 2.1;
+    const WALK_SPEED = 8.5;
+    const SPRINT_MULT = 1.55;
+    const GRAVITY = 18;
+    const JUMP_POWER = 7.2;
+
+    const state = {
+      started: false,
+      paused: false,
+      inventoryOpen: false,
+      mapOpen: false,
+      settingsOpen: false,
+      waitingForBind: null,
+      dayTimer: 0,
+      currentTarget: null,
+      time: 0,
+      mapZoom: 1,
+      waypoint: null
+    };
+
+    const player = {
+      x: 0,
+      y: 0,
+      z: 22,
+      airY: 0,
+      velocityY: 0,
+      grounded: true,
+      yaw: 0,
+      pitch: -0.08,
+      health: 100,
+      hunger: 100,
+      thirst: 100,
+      selectedSlot: 0,
+      lastHit: 0,
+
+      wood: 0,
+      stone: 0,
+      metalOre: 0,
+      sulfurOre: 0,
+      cloth: 0,
+      scrap: 0,
+      lowGradeFuel: 0,
+      animalFat: 0,
+      mushrooms: 0,
+      waterBottle: 0
+    };
+
+    const graphics = {
+      shaders: true,
+      fog: true,
+      shadows: true,
+      minimap: true,
+      compass: true
+    };
+
+    const keybinds = {
+      forward: "KeyW",
+      backward: "KeyS",
+      left: "KeyA",
+      right: "KeyD",
+      sprint: "ShiftLeft",
+      jump: "Space",
+      interact: "KeyE",
+      inventory: "Tab",
+      map: "KeyM",
+      settings: "KeyO"
+    };
+
+    const keybindLabels = {
+      forward: "Pohyb dopředu",
+      backward: "Pohyb dozadu",
+      left: "Pohyb doleva",
+      right: "Pohyb doprava",
+      sprint: "Běh",
+      jump: "Skok",
+      interact: "Interakce / pít",
+      inventory: "Inventář",
+      map: "Mapa",
+      settings: "Nastavení"
+    };
+
+    const tools = [
+      { id: "rock", name: "Kámen", icon: "🪨", damage: 14, gather: 1.0 },
+      { id: "torch", name: "Louč", icon: "🔥", damage: 8, gather: 0.7 },
+      { id: "hatchet", name: "Sekera", icon: "🪓", damage: 20, gather: 1.8, best: "wood" },
+      { id: "pickaxe", name: "Krumpáč", icon: "⛏️", damage: 22, gather: 1.9, best: "ore" },
+      { id: "spear", name: "Oštěp", icon: "🔱", damage: 15, gather: 0.8 }
+    ];
+
+    const recipes = [
+      {
+        name: "Low grade fuel",
+        icon: "🛢️",
+        description: "základní palivo",
+        cost: { cloth: 10, animalFat: 5 },
+        do: function () {
+          player.lowGradeFuel += 5;
+          showMessage("Vyrobil jsi low grade fuel +5");
+        }
+      },
+      {
+        name: "Water bottle",
+        icon: "💧",
+        description: "lahev s vodou, doplní žízeň",
+        cost: { scrap: 4 },
+        do: function () {
+          player.waterBottle += 1;
+          showMessage("Vyrobil jsi water bottle +1");
+        }
+      },
+      {
+        name: "Sleeping bag",
+        icon: "🛏️",
+        description: "respawn dekorace",
+        cost: { cloth: 35 },
+        do: function () {
+          createSleepingBag(
+            player.x - Math.sin(player.yaw) * 4,
+            player.z - Math.cos(player.yaw) * 4
+          );
+          showMessage("Položil jsi sleeping bag");
+        }
+      },
+      {
+        name: "Wood foundation",
+        icon: "🟫",
+        description: "základ base",
+        cost: { wood: 120 },
+        do: function () {
+          createPlayerFoundation(
+            player.x - Math.sin(player.yaw) * 6,
+            player.z - Math.cos(player.yaw) * 6
+          );
+          showMessage("Postavil jsi foundation");
+        }
+      },
+      {
+        name: "Wood wall",
+        icon: "🧱",
+        description: "dřevěná stěna",
+        cost: { wood: 90 },
+        do: function () {
+          createPlayerWall(
+            player.x - Math.sin(player.yaw) * 6,
+            player.z - Math.cos(player.yaw) * 6
+          );
+          showMessage("Postavil jsi wall");
+        }
+      },
+      {
+        name: "Small furnace",
+        icon: "🏺",
+        description: "malá pec",
+        cost: { stone: 120, sulfurOre: 20, lowGradeFuel: 5 },
+        do: function () {
+          createFurnace(
+            player.x - Math.sin(player.yaw) * 5,
+            player.z - Math.cos(player.yaw) * 5
+          );
+          showMessage("Postavil jsi small furnace");
+        }
+      }
+    ];
+
+    const ui = {
+      mainMenu: document.getElementById("mainMenu"),
+      pauseOverlay: document.getElementById("pauseOverlay"),
+      inventoryOverlay: document.getElementById("inventoryOverlay"),
+      mapOverlay: document.getElementById("mapOverlay"),
+      settingsOverlay: document.getElementById("settingsOverlay"),
+
+      vitalHp: document.getElementById("vitalHp"),
+      vitalFood: document.getElementById("vitalFood"),
+      vitalWater: document.getElementById("vitalWater"),
+      vitalHpText: document.getElementById("vitalHpText"),
+      vitalFoodText: document.getElementById("vitalFoodText"),
+      vitalWaterText: document.getElementById("vitalWaterText"),
+      vitalsRust: document.getElementById("vitalsRust"),
+
+      compass: document.getElementById("compass"),
+      compassText: document.getElementById("compassText"),
+
+      miniMapPanel: document.getElementById("miniMapPanel"),
+      miniMapCanvas: document.getElementById("miniMapCanvas"),
+      resourceFeed: document.getElementById("resourceFeed"),
+
+      targetPanel: document.getElementById("targetPanel"),
+      targetName: document.getElementById("targetName"),
+      targetText: document.getElementById("targetText"),
+      targetBar: document.getElementById("targetBar"),
+
+      centerMessage: document.getElementById("centerMessage"),
+      helpPanel: document.getElementById("helpPanel"),
+      crosshair: document.getElementById("crosshair"),
+      hitMarker: document.getElementById("hitMarker"),
+      hotbar: document.getElementById("hotbar"),
+
+      inventoryGrid: document.getElementById("inventoryGrid"),
+      craftingGrid: document.getElementById("craftingGrid"),
+      bigMapCanvas: document.getElementById("bigMapCanvas"),
+      keybindGrid: document.getElementById("keybindGrid"),
+      bindInfo: document.getElementById("bindInfo")
+    };
+
+    const miniMapCtx = ui.miniMapCanvas.getContext("2d");
+    const bigMapCtx = ui.bigMapCanvas.getContext("2d");
+
+    let scene;
+    let camera;
+    let renderer;
+    let clock;
+    let raycaster;
+    let ambientLight;
+    let sunLight;
+    let torchLight;
+
+    const keys = {};
+    const interactables = [];
+    const rayTargets = [];
+    const mapMarkers = [];
+    const animatedObjects = [];
+    const hazardZones = [];
+
+    let heldGroup = null;
+    const heldModels = {};
+
+    const heldState = {
+      bob: 0,
+      swing: 0,
+      switch: 0,
+      activeTool: "rock"
+    };
+
+    document.getElementById("startBtn").addEventListener("click", startGame);
+    document.getElementById("resumeBtn").addEventListener("click", resumeGame);
+
+    document.getElementById("pauseSettingsBtn").addEventListener("click", function () {
+      ui.pauseOverlay.style.display = "none";
+      state.paused = false;
+      toggleSettings(true);
+    });
+
+    document.getElementById("pauseInventoryBtn").addEventListener("click", function () {
+      ui.pauseOverlay.style.display = "none";
+      state.paused = false;
+      toggleInventory(true);
+    });
+
+    document.getElementById("pauseMapBtn").addEventListener("click", function () {
+      ui.pauseOverlay.style.display = "none";
+      state.paused = false;
+      toggleMap(true);
+    });
+
+    document.getElementById("menuShaderBtn").addEventListener("click", function () {
+      toggleGraphic("shaders");
+    });
+
+    document.getElementById("menuFogBtn").addEventListener("click", function () {
+      toggleGraphic("fog");
+    });
+
+    document.getElementById("menuShadowBtn").addEventListener("click", function () {
+      toggleGraphic("shadows");
+    });
+
+    document.body.addEventListener("click", function () {
+      if (
+        state.started &&
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen &&
+        document.pointerLockElement !== document.body
+      ) {
+        resumeGame();
+      }
+    });
+
+    document.addEventListener("pointerlockchange", function () {
+      if (!state.started) return;
+
+      const locked = document.pointerLockElement === document.body;
+
+      state.paused =
+        !locked &&
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen;
+
+      ui.pauseOverlay.style.display = state.paused ? "flex" : "none";
+    });
+
+    document.addEventListener("keydown", onKeyDown);
+
+    document.addEventListener("keyup", function (e) {
+      keys[e.code] = false;
+    });
+
+    document.addEventListener("mousemove", onMouseMove);
+
+    document.addEventListener("mousedown", function (e) {
+      if (
+        e.button === 0 &&
+        !state.paused &&
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen &&
+        document.pointerLockElement === document.body
+      ) {
+        hitTarget();
+      }
+    });
+
+    document.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+    });
+
+    window.addEventListener("resize", onResize);
+
+    ui.bigMapCanvas.addEventListener("wheel", function (e) {
+      if (!state.mapOpen) return;
+
+      e.preventDefault();
+
+      if (e.deltaY < 0) {
+        state.mapZoom = clamp(state.mapZoom * 1.15, 0.75, 3.2);
+      } else {
+        state.mapZoom = clamp(state.mapZoom / 1.15, 0.75, 3.2);
+      }
+
+      drawBigMap();
+    });
+
+    ui.bigMapCanvas.addEventListener("click", function (e) {
+      if (!state.mapOpen) return;
+
+      state.waypoint = mapMouseToWorld(e);
+      showMessage("Waypoint nastaven.");
+      drawBigMap();
+    });
+
+    ui.bigMapCanvas.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+
+      state.waypoint = null;
+      showMessage("Waypoint smazán.");
+      drawBigMap();
+    });
+
+    function startGame() {
+      ui.mainMenu.style.display = "none";
+      state.started = true;
+
+      if (!renderer) {
+        init();
+      }
+
+      showGameUI();
+      applyGraphics();
+      resumeGame();
+    }
+
+    function resumeGame() {
+      state.paused = false;
+      ui.pauseOverlay.style.display = "none";
+
+      if (
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen &&
+        document.pointerLockElement !== document.body
+      ) {
+        document.body.requestPointerLock();
+      }
+    }
+
+    function showGameUI() {
+      ui.vitalsRust.style.display = "block";
+      ui.resourceFeed.style.display = "block";
+      ui.compass.style.display = graphics.compass ? "block" : "none";
+      ui.miniMapPanel.style.display = graphics.minimap ? "block" : "none";
+      ui.centerMessage.style.display = "block";
+      ui.helpPanel.style.display = "block";
+      ui.crosshair.style.display = "block";
+      ui.hitMarker.style.display = "block";
+      ui.hotbar.style.display = "block";
+    }
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x88bff0);
+      scene.fog = new THREE.Fog(0x88bff0, 95, 340);
+
+      camera = new THREE.PerspectiveCamera(
+        76,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+
+      scene.add(camera);
+
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: "high-performance"
+      });
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+
+      document.body.appendChild(renderer.domElement);
+
+      clock = new THREE.Clock();
+      raycaster = new THREE.Raycaster();
+
+      createLights();
+      createHeldTools();
+      createStableMap();
+
+      renderHotbar();
+      renderInventory();
+      renderCrafting();
+      renderSettings();
+      applyGraphics();
+
+      showMessage("Stable Map: objekty už nelítají. E = loot/pít, Space = skok.");
+
+      animate();
+    }
+
+    function createLights() {
+      ambientLight = new THREE.HemisphereLight(0xe7f4ff, 0x314d25, 0.82);
+      scene.add(ambientLight);
+
+      sunLight = new THREE.DirectionalLight(0xfff2c9, 2.45);
+      sunLight.position.set(90, 130, 40);
+      sunLight.castShadow = true;
+
+      sunLight.shadow.mapSize.width = 2048;
+      sunLight.shadow.mapSize.height = 2048;
+      sunLight.shadow.camera.near = 1;
+      sunLight.shadow.camera.far = 430;
+      sunLight.shadow.camera.left = -180;
+      sunLight.shadow.camera.right = 180;
+      sunLight.shadow.camera.top = 180;
+      sunLight.shadow.camera.bottom = -180;
+
+      scene.add(sunLight);
+
+      const sunMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(10, 18, 18),
+        new THREE.MeshBasicMaterial({
+          color: 0xffefb4
+        })
+      );
+
+      sunMesh.position.copy(sunLight.position.clone().multiplyScalar(1.2));
+      scene.add(sunMesh);
+
+      torchLight = new THREE.PointLight(0xff8a2a, 0, 15, 2);
+      torchLight.position.set(0.28, 0.18, -0.2);
+      camera.add(torchLight);
+    }
+
+    function createStableMap() {
+      createGround();
+      createWater();
+      createRiver();
+
+      createGrassField(900);
+      createBushes(90);
+      createPebbles(70);
+      createTrees(80);
+      createOreNodes(70);
+
+      createOutpost(70, -55);
+      createGasStation(-105, -65);
+      createRadioTower(-90, 58);
+      createShipWreck(-128, 100);
+      createWatchTower(42, 104);
+      createCave(106, 78);
+      createAbandonedBase(-38, -38);
+      createRoad();
+      createCampfire(2, 6);
+
+      createBarrel(9, -11);
+      createBarrel(14, -14);
+      createBarrel(66, -62);
+      createBarrel(-98, -61);
+
+      createLootCrate(-8, 12, "normal");
+      createLootCrate(22, 12, "normal");
+      createLootCrate(64, -48, "normal");
+      createLootCrate(-104, -70, "rare");
+
+      for (let i = 0; i < 10; i++) {
+        const p = randomIslandPoint();
+        createLootCrate(p.x, p.z, Math.random() < 0.25 ? "rare" : "normal");
+      }
+
+      createAnimals();
+      createClouds();
+    }
+
+    function createGround() {
+      const ground = new THREE.Mesh(
+        new THREE.CircleGeometry(ISLAND_RADIUS, 160),
+        new THREE.MeshStandardMaterial({
+          color: 0x5d8f3d,
+          roughness: 0.96,
+          metalness: 0.01
+        })
+      );
+
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0;
+      ground.receiveShadow = true;
+
+      scene.add(ground);
+
+      for (let i = 0; i < 26; i++) {
+        const p = randomIslandPoint();
+
+        const patch = new THREE.Mesh(
+          new THREE.CircleGeometry(rand(8, 24), 20),
+          new THREE.MeshStandardMaterial({
+            color: randomChoice([0x477b32, 0x6b8f43, 0x4f7a2d, 0x3f6d2b]),
+            roughness: 1
+          })
+        );
+
+        patch.rotation.x = -Math.PI / 2;
+        patch.position.set(p.x, 0.012, p.z);
+        patch.receiveShadow = true;
+
+        scene.add(patch);
+      }
+    }
+
+    function createWater() {
+      const ocean = new THREE.Mesh(
+        new THREE.RingGeometry(ISLAND_RADIUS + 1, 430, 180),
+        new THREE.MeshStandardMaterial({
+          color: 0x2a71d7,
+          roughness: 0.35,
+          metalness: 0.08,
+          transparent: true,
+          opacity: 0.82
+        })
+      );
+
+      ocean.rotation.x = -Math.PI / 2;
+      ocean.position.y = -0.05;
+
+      scene.add(ocean);
+
+      animatedObjects.push({
+        type: "water",
+        object: ocean
+      });
+    }
+
+    function createRiver() {
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x3ba7ff,
+        roughness: 0.42,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.76
+      });
+
+      for (let i = -8; i <= 8; i++) {
+        const z = i * 18;
+        const x = riverX(z);
+
+        const segment = new THREE.Mesh(
+          new THREE.BoxGeometry(10, 0.05, 20),
+          material
+        );
+
+        segment.position.set(x, 0.03, z);
+        segment.rotation.y = Math.sin(z * 0.03) * 0.35;
+        segment.receiveShadow = true;
+
+        scene.add(segment);
+      }
+
+      mapMarkers.push({
+        x: 0,
+        z: 0,
+        kind: "water",
+        label: "River"
+      });
+    }
+
+    function createGrassField(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+        const group = new THREE.Group();
+
+        const material = new THREE.MeshStandardMaterial({
+          color: randomChoice([0x2f6f32, 0x3c873d, 0x5a9848, 0x4f8a3a]),
+          roughness: 1
+        });
+
+        const bladeCount = randInt(7, 13);
+
+        for (let j = 0; j < bladeCount; j++) {
+          const height = rand(0.35, 1.05);
+
+          const blade = new THREE.Mesh(
+            new THREE.BoxGeometry(0.035, height, 0.035),
+            material
+          );
+
+          blade.position.set(
+            rand(-0.35, 0.35),
+            height / 2,
+            rand(-0.35, 0.35)
+          );
+
+          blade.rotation.z = rand(-0.25, 0.25);
+          blade.rotation.x = rand(-0.08, 0.08);
+          blade.rotation.y = rand(0, Math.PI);
+
+          group.add(blade);
+        }
+
+        if (Math.random() < 0.12) {
+          const flower = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 8, 8),
+            new THREE.MeshStandardMaterial({
+              color: randomChoice([0xfef08a, 0xfca5a5, 0xbfdbfe, 0xffffff]),
+              roughness: 0.8
+            })
+          );
+
+          flower.position.set(rand(-0.25, 0.25), 0.42, rand(-0.25, 0.25));
+
+          group.add(flower);
+        }
+
+        placeOnGround(group, p.x, p.z, 0);
+
+        scene.add(group);
+      }
+    }
+
+    function createBushes(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+        const bush = new THREE.Group();
+
+        const base = new THREE.Mesh(
+          new THREE.SphereGeometry(rand(0.7, 1.35), 14, 12),
+          new THREE.MeshStandardMaterial({
+            color: randomChoice([0x1f5c2b, 0x285f2d, 0x2b6d2a, 0x3c7a31]),
+            roughness: 1
+          })
+        );
+
+        base.scale.set(1.1, 0.72, 1.05);
+        base.position.y = 0.72;
+        base.castShadow = true;
+
+        bush.add(base);
+
+        placeOnGround(bush, p.x, p.z, 0);
+
+        scene.add(bush);
+      }
+    }
+
+    function createPebbles(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+        const group = new THREE.Group();
+
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x7a736b,
+          roughness: 1
+        });
+
+        for (let j = 0; j < 4; j++) {
+          const size = rand(0.12, 0.28);
+
+          const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(size, 0),
+            material
+          );
+
+          rock.position.set(rand(-1, 1), size * 0.55, rand(-1, 1));
+          rock.scale.y = rand(0.4, 0.8);
+          rock.castShadow = true;
+
+          group.add(rock);
+        }
+
+        placeOnGround(group, p.x, p.z, 0);
+
+        scene.add(group);
+      }
+    }
+
+    function createTrees(count) {
+      for (let i = 0; i < count; i++) {
+        createTree(randomIslandPoint());
+      }
+    }
+
+    function createTree(point) {
+      const group = new THREE.Group();
+
+      const trunkHeight = rand(4.8, 6.8);
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.42, trunkHeight, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x74451c,
+          roughness: 0.92
+        })
+      );
+
+      trunk.position.y = trunkHeight / 2;
+      trunk.castShadow = true;
+
+      group.add(trunk);
+
+      const leafMaterial = new THREE.MeshStandardMaterial({
+        color: randomChoice([0x155e2f, 0x166534, 0x1b7a3d]),
+        roughness: 0.92
+      });
+
+      const crown1 = new THREE.Mesh(
+        new THREE.ConeGeometry(1.9, 3.6, 12),
+        leafMaterial
+      );
+
+      crown1.position.y = trunkHeight + 1.1;
+      crown1.castShadow = true;
+
+      group.add(crown1);
+
+      const crown2 = new THREE.Mesh(
+        new THREE.ConeGeometry(1.45, 2.7, 12),
+        leafMaterial
+      );
+
+      crown2.position.y = trunkHeight + 2.7;
+      crown2.castShadow = true;
+
+      group.add(crown2);
+
+      placeOnGround(group, point.x, point.z, 0);
+
+      group.rotation.y = rand(0, Math.PI * 2);
+
+      scene.add(group);
+
+      registerInteractable({
+        object: group,
+        type: "wood",
+        label: "Strom",
+        hp: 100,
+        maxHp: 100,
+        reward: {
+          wood: randInt(45, 72)
+        }
+      });
+    }
+
+    function createOreNodes(count) {
+      for (let i = 0; i < count; i++) {
+        const type = randomChoice(["stone", "stone", "metalOre", "sulfurOre"]);
+        createOreNode(randomIslandPoint(), type);
+      }
+    }
+
+    function createOreNode(point, type) {
+      const config = {
+        stone: {
+          label: "Stone ore",
+          base: 0x7b8591,
+          vein: 0xd9dfe7,
+          hp: 115,
+          reward: {
+            stone: randInt(38, 62)
+          },
+          metal: 0.04
+        },
+        metalOre: {
+          label: "Metal ore",
+          base: 0x77512f,
+          vein: 0xff9952,
+          hp: 138,
+          reward: {
+            metalOre: randInt(24, 42)
+          },
+          metal: 0.38
+        },
+        sulfurOre: {
+          label: "Sulfur ore",
+          base: 0x876b25,
+          vein: 0xffea70,
+          hp: 132,
+          reward: {
+            sulfurOre: randInt(22, 36)
+          },
+          metal: 0.16
+        }
+      }[type];
+
+      const group = new THREE.Group();
+
+      const baseMaterial = new THREE.MeshStandardMaterial({
+        color: config.base,
+        roughness: 0.76,
+        metalness: config.metal
+      });
+
+      for (let i = 0; i < 6; i++) {
+        const size = rand(0.55, 1.15);
+
+        const part = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(size, 0),
+          baseMaterial
+        );
+
+        part.position.set(
+          rand(-0.7, 0.7),
+          size * 0.55 + rand(0.02, 0.18),
+          rand(-0.7, 0.7)
+        );
+
+        part.scale.set(rand(0.8, 1.25), rand(0.7, 1.15), rand(0.8, 1.25));
+        part.rotation.set(rand(0, 2.8), rand(0, 6), rand(0, 2.8));
+        part.castShadow = true;
+        part.receiveShadow = true;
+
+        group.add(part);
+      }
+
+      const veinMaterial = new THREE.MeshStandardMaterial({
+        color: config.vein,
+        emissive: config.vein,
+        emissiveIntensity: type === "stone" ? 0.02 : 0.08,
+        roughness: 0.45,
+        metalness: config.metal
+      });
+
+      for (let i = 0; i < 4; i++) {
+        const vein = new THREE.Mesh(
+          new THREE.BoxGeometry(rand(0.08, 0.14), rand(0.55, 0.95), rand(0.08, 0.14)),
+          veinMaterial
+        );
+
+        vein.position.set(rand(-0.65, 0.65), rand(0.55, 1.45), rand(-0.65, 0.65));
+        vein.rotation.set(rand(0, 2), rand(0, 6), rand(0, 2));
+        vein.castShadow = true;
+
+        group.add(vein);
+      }
+
+      placeOnGround(group, point.x, point.z, 0);
+
+      group.rotation.y = rand(0, Math.PI * 2);
+
+      scene.add(group);
+
+      registerInteractable({
+        object: group,
+        type: type,
+        label: config.label,
+        hp: config.hp,
+        maxHp: config.hp,
+        reward: config.reward
+      });
+    }
+
+    function createOutpost(x, z) {
+      const group = new THREE.Group();
+
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(34, 0.8, 34),
+        new THREE.MeshStandardMaterial({
+          color: 0x7b7c77,
+          roughness: 0.92
+        })
+      );
+
+      base.position.y = 0.4;
+      base.receiveShadow = true;
+
+      group.add(base);
+
+      const metalMaterial = new THREE.MeshStandardMaterial({
+        color: 0x67768a,
+        roughness: 0.64,
+        metalness: 0.32
+      });
+
+      const woodMaterial = new THREE.MeshStandardMaterial({
+        color: 0x8a5b33,
+        roughness: 0.88
+      });
+
+      for (let i = 0; i < 12; i++) {
+        const fenceA = new THREE.Mesh(
+          new THREE.BoxGeometry(2.3, 2.3, 0.16),
+          metalMaterial
+        );
+
+        fenceA.position.set(-13.5 + i * 2.45, 1.9, -14);
+        fenceA.castShadow = true;
+
+        group.add(fenceA);
+
+        const fenceB = fenceA.clone();
+        fenceB.position.z = 14;
+
+        group.add(fenceB);
+      }
+
+      for (let i = 0; i < 10; i++) {
+        const fenceC = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 2.3, 2.3),
+          metalMaterial
+        );
+
+        fenceC.position.set(-14, 1.9, -11 + i * 2.45);
+        fenceC.castShadow = true;
+
+        group.add(fenceC);
+
+        const fenceD = fenceC.clone();
+        fenceD.position.x = 14;
+
+        group.add(fenceD);
+      }
+
+      const recycler = new THREE.Mesh(
+        new THREE.BoxGeometry(2.6, 3.4, 2.2),
+        new THREE.MeshStandardMaterial({
+          color: 0x263244,
+          roughness: 0.55,
+          metalness: 0.55
+        })
+      );
+
+      recycler.position.set(6.3, 2.5, -2);
+      recycler.castShadow = true;
+
+      group.add(recycler);
+
+      const vending = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 3.2, 1.2),
+        new THREE.MeshStandardMaterial({
+          color: 0x1b9a59,
+          roughness: 0.62,
+          metalness: 0.18
+        })
+      );
+
+      vending.position.set(2.8, 2.4, -2);
+      vending.castShadow = true;
+
+      group.add(vending);
+
+      const shack = new THREE.Group();
+
+      const shackBase = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 4, 6),
+        woodMaterial
+      );
+
+      shackBase.position.y = 2.4;
+      shackBase.castShadow = true;
+
+      shack.add(shackBase);
+
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(5.8, 2, 4),
+        new THREE.MeshStandardMaterial({
+          color: 0x4b3421,
+          roughness: 0.9
+        })
+      );
+
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = 5.3;
+      roof.castShadow = true;
+
+      shack.add(roof);
+
+      shack.position.set(-5.5, 0.8, -3);
+
+      group.add(shack);
+
+      const light = new THREE.PointLight(0xffdd92, 1.4, 16);
+      light.position.set(-5.5, 5.5, -3);
+
+      group.add(light);
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Outpost"
+      });
+    }
+
+    function createGasStation(x, z) {
+      const group = new THREE.Group();
+
+      const concrete = new THREE.MeshStandardMaterial({
+        color: 0x9ca3af,
+        roughness: 0.92
+      });
+
+      const red = new THREE.MeshStandardMaterial({
+        color: 0xb91c1c,
+        roughness: 0.72
+      });
+
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(24, 0.5, 16),
+        concrete
+      );
+
+      base.position.y = 0.25;
+
+      group.add(base);
+
+      const shop = new THREE.Mesh(
+        new THREE.BoxGeometry(10, 4.8, 8),
+        concrete
+      );
+
+      shop.position.set(-4.5, 2.65, 0);
+      shop.castShadow = true;
+
+      group.add(shop);
+
+      const roof = new THREE.Mesh(
+        new THREE.BoxGeometry(24, 0.5, 18),
+        red
+      );
+
+      roof.position.y = 5.7;
+      roof.castShadow = true;
+
+      group.add(roof);
+
+      for (let i = 0; i < 2; i++) {
+        const pump = new THREE.Mesh(
+          new THREE.BoxGeometry(1.2, 2.5, 1.2),
+          red
+        );
+
+        pump.position.set(5 + i * 4, 1.4, 2);
+        pump.castShadow = true;
+
+        group.add(pump);
+      }
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Gas station"
+      });
+    }
+
+    function createRadioTower(x, z) {
+      const group = new THREE.Group();
+
+      const metal = new THREE.MeshStandardMaterial({
+        color: 0xa4adb9,
+        roughness: 0.45,
+        metalness: 0.62
+      });
+
+      for (let i = 0; i < 4; i++) {
+        const leg = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.08, 18, 8),
+          metal
+        );
+
+        leg.position.set(i < 2 ? -0.9 : 0.9, 9, i % 2 ? 0.9 : -0.9);
+        leg.castShadow = true;
+
+        group.add(leg);
+      }
+
+      for (let y = 2; y <= 16; y += 2) {
+        const beam1 = new THREE.Mesh(
+          new THREE.BoxGeometry(2.4, 0.08, 0.08),
+          metal
+        );
+
+        beam1.position.set(0, y, -0.9);
+
+        group.add(beam1);
+
+        const beam2 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.08, 2.4),
+          metal
+        );
+
+        beam2.position.set(-0.9, y + 0.5, 0);
+
+        group.add(beam2);
+      }
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Radio tower"
+      });
+    }
+
+    function createShipWreck(x, z) {
+      const group = new THREE.Group();
+
+      const rust = new THREE.MeshStandardMaterial({
+        color: 0x7a3217,
+        roughness: 0.82,
+        metalness: 0.35
+      });
+
+      const hull = new THREE.Mesh(
+        new THREE.BoxGeometry(28, 4, 9),
+        rust
+      );
+
+      hull.position.y = 2;
+      hull.rotation.z = -0.12;
+      hull.castShadow = true;
+
+      group.add(hull);
+
+      const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 5, 7),
+        rust
+      );
+
+      cabin.position.set(4, 6.4, 0);
+      cabin.castShadow = true;
+
+      group.add(cabin);
+
+      placeOnGround(group, x, z, 0);
+
+      group.rotation.y = 0.7;
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Ship wreck"
+      });
+    }
+
+    function createWatchTower(x, z) {
+      const group = new THREE.Group();
+
+      const wood = new THREE.MeshStandardMaterial({
+        color: 0x71431c,
+        roughness: 0.9
+      });
+
+      for (let i = 0; i < 4; i++) {
+        const leg = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.12, 12, 8),
+          wood
+        );
+
+        leg.position.set(i < 2 ? -2 : 2, 6, i % 2 ? 2 : -2);
+        leg.castShadow = true;
+
+        group.add(leg);
+      }
+
+      const platform = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 0.4, 6),
+        wood
+      );
+
+      platform.position.y = 10;
+      platform.castShadow = true;
+
+      group.add(platform);
+
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(4.2, 2.1, 4),
+        wood
+      );
+
+      roof.position.y = 12.2;
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = true;
+
+      group.add(roof);
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Watch tower"
+      });
+    }
+
+    function createCave(x, z) {
+      const group = new THREE.Group();
+
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x43454a,
+        roughness: 0.96
+      });
+
+      for (let i = 0; i < 8; i++) {
+        const rock = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(rand(3, 7), 0),
+          material
+        );
+
+        rock.position.set(rand(-8, 8), rand(1.5, 4), rand(-4, 7));
+        rock.scale.y = rand(0.6, 1.0);
+        rock.castShadow = true;
+
+        group.add(rock);
+      }
+
+      const hole = new THREE.Mesh(
+        new THREE.CircleGeometry(5, 24),
+        new THREE.MeshBasicMaterial({
+          color: 0x01040b
+        })
+      );
+
+      hole.position.set(0, 3.2, -2.3);
+      hole.rotation.y = Math.PI;
+
+      group.add(hole);
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Cave"
+      });
+    }
+
+    function createAbandonedBase(x, z) {
+      const group = new THREE.Group();
+
+      const wood = new THREE.MeshStandardMaterial({
+        color: 0x8a6845,
+        roughness: 0.9
+      });
+
+      const stone = new THREE.MeshStandardMaterial({
+        color: 0x737b85,
+        roughness: 0.92
+      });
+
+      const foundation = new THREE.Mesh(
+        new THREE.BoxGeometry(11, 0.45, 11),
+        wood
+      );
+
+      foundation.position.y = 0.22;
+      foundation.castShadow = true;
+
+      group.add(foundation);
+
+      const wall1 = new THREE.Mesh(
+        new THREE.BoxGeometry(11, 3.3, 0.35),
+        stone
+      );
+
+      wall1.position.set(0, 1.85, -5.3);
+      wall1.castShadow = true;
+
+      group.add(wall1);
+
+      const wall2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 3.3, 11),
+        stone
+      );
+
+      wall2.position.set(-5.3, 1.85, 0);
+      wall2.castShadow = true;
+
+      group.add(wall2);
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Abandoned base"
+      });
+    }
+
+    function createRoad() {
+      const road = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 0.08, 220),
+        new THREE.MeshStandardMaterial({
+          color: 0x5f5b4c,
+          roughness: 1
+        })
+      );
+
+      road.position.set(18, 0.04, 0);
+      road.rotation.y = 0.18;
+      road.receiveShadow = true;
+
+      scene.add(road);
+
+      mapMarkers.push({
+        x: 18,
+        z: 0,
+        kind: "monument",
+        label: "Road"
+      });
+    }
+
+    function createCampfire(x, z) {
+      const group = new THREE.Group();
+
+      for (let i = 0; i < 9; i++) {
+        const angle = (Math.PI * 2 / 9) * i;
+
+        const rock = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.24, 0),
+          new THREE.MeshStandardMaterial({
+            color: 0x666666
+          })
+        );
+
+        rock.position.set(Math.cos(angle) * 0.9, 0.22, Math.sin(angle) * 0.9);
+
+        group.add(rock);
+      }
+
+      const fire = new THREE.Mesh(
+        new THREE.ConeGeometry(0.42, 1.2, 9),
+        new THREE.MeshStandardMaterial({
+          color: 0xff7a00,
+          emissive: 0xff4500,
+          emissiveIntensity: 1.15
+        })
+      );
+
+      fire.position.y = 0.85;
+
+      group.add(fire);
+
+      animatedObjects.push({
+        type: "fire",
+        object: fire
+      });
+
+      const light = new THREE.PointLight(0xff7a00, 1.8, 18);
+      light.position.set(0, 2.2, 0);
+
+      group.add(light);
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      hazardZones.push({
+        x: x,
+        z: z,
+        radius: 2.0,
+        damage: 22
+      });
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "monument",
+        label: "Campfire"
+      });
+    }
+
+    function createBarrel(x, z) {
+      const barrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.68, 0.68, 1.6, 18),
+        new THREE.MeshStandardMaterial({
+          color: 0xb45309,
+          roughness: 0.55,
+          metalness: 0.32
+        })
+      );
+
+      placeOnGround(barrel, x, z, 0.8);
+
+      barrel.castShadow = true;
+
+      scene.add(barrel);
+
+      registerInteractable({
+        object: barrel,
+        type: "loot",
+        label: "Barel",
+        hp: 72,
+        maxHp: 72,
+        reward: {
+          scrap: randInt(3, 8),
+          metalOre: randInt(2, 8)
+        }
+      });
+    }
+
+    function createLootCrate(x, z, rarity) {
+      const group = new THREE.Group();
+      const rare = rarity === "rare";
+
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0, 1.25, 2.0),
+        new THREE.MeshStandardMaterial({
+          color: rare ? 0x1d4ed8 : 0x9d6a34,
+          roughness: 0.82,
+          metalness: rare ? 0.18 : 0.05
+        })
+      );
+
+      box.position.y = 0.62;
+      box.castShadow = true;
+
+      group.add(box);
+
+      const bandMaterial = new THREE.MeshStandardMaterial({
+        color: rare ? 0xdbeafe : 0x3a4351,
+        roughness: 0.62,
+        metalness: 0.3
+      });
+
+      const band1 = new THREE.Mesh(
+        new THREE.BoxGeometry(2.1, 0.16, 0.12),
+        bandMaterial
+      );
+
+      band1.position.set(0, 0.92, 1.02);
+
+      group.add(band1);
+
+      const band2 = band1.clone();
+      band2.position.z = -1.02;
+
+      group.add(band2);
+
+      placeOnGround(group, x, z, 0);
+
+      scene.add(group);
+
+      const loot = generateCrateLoot(rarity);
+
+      registerInteractable({
+        object: group,
+        type: rare ? "rareLoot" : "lootCrate",
+        label: rare ? "Rare bedna" : "Bedna",
+        hp: 90,
+        maxHp: 90,
+        openable: true,
+        opened: false,
+        loot: loot,
+        reward: loot
+      });
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: rare ? "rareLoot" : "loot",
+        label: rare ? "Rare crate" : "Crate"
+      });
+    }
+
+    function generateCrateLoot(rarity) {
+      const loot = {};
+
+      if (rarity === "rare") {
+        loot.scrap = randInt(10, 25);
+        loot.metalOre = randInt(12, 28);
+        loot.waterBottle = randInt(1, 2);
+
+        if (Math.random() < 0.5) {
+          loot.sulfurOre = randInt(8, 18);
+        }
+      } else {
+        loot.wood = randInt(20, 55);
+        loot.stone = randInt(15, 45);
+
+        if (Math.random() < 0.55) {
+          loot.scrap = randInt(2, 8);
+        }
+
+        if (Math.random() < 0.35) {
+          loot.waterBottle = 1;
+        }
+
+        if (Math.random() < 0.35) {
+          loot.cloth = randInt(3, 9);
+        }
+      }
+
+      return loot;
+    }
+
+    function createSleepingBag(x, z) {
+      const bag = new THREE.Mesh(
+        new THREE.BoxGeometry(2.3, 0.22, 4.2),
+        new THREE.MeshStandardMaterial({
+          color: 0x2563eb,
+          roughness: 0.9
+        })
+      );
+
+      placeOnGround(bag, x, z, 0.11);
+
+      bag.rotation.y = player.yaw;
+      bag.castShadow = true;
+
+      scene.add(bag);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "build",
+        label: "Sleeping bag"
+      });
+    }
+
+    function createPlayerFoundation(x, z) {
+      const foundation = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 0.4, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0x8a5a2b,
+          roughness: 0.86
+        })
+      );
+
+      placeOnGround(foundation, x, z, 0.2);
+
+      foundation.rotation.y = player.yaw;
+      foundation.castShadow = true;
+      foundation.receiveShadow = true;
+
+      scene.add(foundation);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "build",
+        label: "Foundation"
+      });
+    }
+
+    function createPlayerWall(x, z) {
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 3, 0.35),
+        new THREE.MeshStandardMaterial({
+          color: 0x8a5a2b,
+          roughness: 0.86
+        })
+      );
+
+      placeOnGround(wall, x, z, 1.5);
+
+      wall.rotation.y = player.yaw;
+      wall.castShadow = true;
+
+      scene.add(wall);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "build",
+        label: "Wood wall"
+      });
+    }
+
+    function createFurnace(x, z) {
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.9, 1.1, 1.8, 18),
+        new THREE.MeshStandardMaterial({
+          color: 0x57534e,
+          roughness: 0.9
+        })
+      );
+
+      body.position.y = 0.9;
+      body.castShadow = true;
+
+      group.add(body);
+
+      placeOnGround(group, x, z, 0);
+
+      group.rotation.y = player.yaw;
+
+      scene.add(group);
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: "build",
+        label: "Furnace"
+      });
+    }
+
+    function createAnimals() {
+      for (let i = 0; i < 10; i++) {
+        const p = randomIslandPoint();
+        const animal = new THREE.Group();
+
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(1.5, 0.8, 0.7),
+          new THREE.MeshStandardMaterial({
+            color: 0x8c7355,
+            roughness: 0.92
+          })
+        );
+
+        body.position.y = 0.8;
+        body.castShadow = true;
+
+        animal.add(body);
+
+        const head = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 0.48, 0.45),
+          new THREE.MeshStandardMaterial({
+            color: 0x8c7355,
+            roughness: 0.92
+          })
+        );
+
+        head.position.set(0.9, 0.96, 0);
+        head.castShadow = true;
+
+        animal.add(head);
+
+        placeOnGround(animal, p.x, p.z, 0);
+
+        scene.add(animal);
+
+        animatedObjects.push({
+          type: "animal",
+          object: animal,
+          speed: rand(0.7, 1.15),
+          dir: rand(0, Math.PI * 2)
+        });
+      }
+    }
+
+    function createClouds() {
+      for (let i = 0; i < 16; i++) {
+        const cloud = new THREE.Group();
+
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 1,
+          transparent: true,
+          opacity: 0.9
+        });
+
+        const parts = 4 + Math.floor(Math.random() * 3);
+
+        for (let j = 0; j < parts; j++) {
+          const part = new THREE.Mesh(
+            new THREE.SphereGeometry(rand(1.6, 3.2), 12, 8),
+            material
+          );
+
+          part.position.set(j * 1.8, rand(-0.4, 0.5), rand(-0.8, 0.8));
+          part.scale.y = rand(0.38, 0.62);
+
+          cloud.add(part);
+        }
+
+        cloud.position.set(rand(-220, 220), rand(65, 95), rand(-220, 220));
+
+        scene.add(cloud);
+
+        animatedObjects.push({
+          type: "cloud",
+          object: cloud,
+          speed: rand(0.2, 0.55)
+        });
+      }
+    }
+
+    function createHeldTools() {
+      heldGroup = new THREE.Group();
+      heldGroup.position.set(0.62, -0.66, -1.08);
+      heldGroup.rotation.set(-0.16, 0.35, -0.18);
+
+      camera.add(heldGroup);
+
+      heldModels.rock = createHeldRock();
+      heldModels.torch = createHeldTorch();
+      heldModels.hatchet = createHeldHatchet();
+      heldModels.pickaxe = createHeldPickaxe();
+      heldModels.spear = createHeldSpear();
+
+      Object.values(heldModels).forEach(function (model) {
+        model.visible = false;
+        heldGroup.add(model);
+      });
+
+      setHeldToolModel(tools[player.selectedSlot].id, false);
+    }
+
+    function createHeldRock() {
+      const group = new THREE.Group();
+
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.23, 0),
+        new THREE.MeshStandardMaterial({
+          color: 0xb2bcc8,
+          roughness: 0.96
+        })
+      );
+
+      rock.scale.set(1.35, 0.9, 1.15);
+      rock.castShadow = true;
+
+      group.add(rock);
+
+      return group;
+    }
+
+    function createHeldTorch() {
+      const group = new THREE.Group();
+
+      const handle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.045, 0.92, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x7c4a18,
+          roughness: 0.88
+        })
+      );
+
+      handle.rotation.z = -0.28;
+
+      group.add(handle);
+
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.33, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0xff7a00,
+          emissive: 0xff4d00,
+          emissiveIntensity: 1.1
+        })
+      );
+
+      flame.position.set(0.12, 0.55, 0);
+      flame.rotation.z = -0.28;
+
+      group.add(flame);
+
+      animatedObjects.push({
+        type: "heldFlame",
+        object: flame
+      });
+
+      return group;
+    }
+
+    function createHeldHatchet() {
+      const group = new THREE.Group();
+
+      const handle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.04, 0.95, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x7c4a18,
+          roughness: 0.88
+        })
+      );
+
+      handle.rotation.z = -0.55;
+
+      group.add(handle);
+
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.18, 0.08),
+        new THREE.MeshStandardMaterial({
+          color: 0xd0d8e3,
+          roughness: 0.36,
+          metalness: 0.7
+        })
+      );
+
+      head.position.set(0.26, 0.34, 0);
+      head.rotation.z = -0.25;
+
+      group.add(head);
+
+      return group;
+    }
+
+    function createHeldPickaxe() {
+      const group = new THREE.Group();
+
+      const handle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.04, 1.02, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x7c4a18,
+          roughness: 0.88
+        })
+      );
+
+      handle.rotation.z = -0.48;
+
+      group.add(handle);
+
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.56, 0.07, 0.08),
+        new THREE.MeshStandardMaterial({
+          color: 0xd0d8e3,
+          roughness: 0.32,
+          metalness: 0.75
+        })
+      );
+
+      head.position.set(0.29, 0.38, 0);
+      head.rotation.z = -0.22;
+
+      group.add(head);
+
+      return group;
+    }
+
+    function createHeldSpear() {
+      const group = new THREE.Group();
+
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.024, 0.03, 1.35, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x7c4a18,
+          roughness: 0.88
+        })
+      );
+
+      shaft.rotation.z = -0.38;
+
+      group.add(shaft);
+
+      const tip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.075, 0.2, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0xd0d8e3,
+          roughness: 0.35,
+          metalness: 0.7
+        })
+      );
+
+      tip.position.set(0.22, 0.64, 0);
+      tip.rotation.z = -0.38;
+
+      group.add(tip);
+
+      return group;
+    }
+
+    function registerInteractable(item) {
+      interactables.push(item);
+
+      item.object.traverse(function (child) {
+        if (child.isMesh) {
+          child.userData.interactable = item;
+          rayTargets.push(child);
+        }
+      });
+    }
+
+    function updateTarget() {
+      if (!raycaster) return;
+
+      raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+
+      const hits = raycaster.intersectObjects(rayTargets, false);
+
+      state.currentTarget = null;
+
+      for (const hit of hits) {
+        const item = hit.object.userData.interactable;
+
+        if (!item) continue;
+
+        const distance = camera.position.distanceTo(getWorldPos(item.object));
+
+        if (distance <= 7) {
+          state.currentTarget = item;
+          break;
+        }
+      }
+
+      if (state.currentTarget) {
+        ui.targetPanel.style.display = "block";
+        ui.targetName.textContent = state.currentTarget.label;
+
+        if (state.currentTarget.openable) {
+          ui.targetText.textContent = "Stiskni E pro otevření";
+          ui.targetBar.style.width = "100%";
+        } else {
+          ui.targetText.textContent =
+            "HP: " +
+            Math.ceil(state.currentTarget.hp) +
+            " / " +
+            state.currentTarget.maxHp;
+
+          ui.targetBar.style.width =
+            (state.currentTarget.hp / state.currentTarget.maxHp * 100) + "%";
+        }
+      } else {
+        ui.targetPanel.style.display = "none";
+      }
+    }
+
+    function hitTarget() {
+      const now = performance.now();
+
+      if (now - player.lastHit < 320) return;
+
+      player.lastHit = now;
+      heldState.swing = 0.18;
+
+      if (!state.currentTarget) {
+        showMessage("Namiř na strom, ore nebo loot a klikni levým tlačítkem.");
+        return;
+      }
+
+      const tool = tools[player.selectedSlot];
+      let damage = tool.damage;
+
+      if (tool.best === "wood" && state.currentTarget.type === "wood") {
+        damage *= 1.42;
+      }
+
+      if (
+        tool.best === "ore" &&
+        ["stone", "metalOre", "sulfurOre"].includes(state.currentTarget.type)
+      ) {
+        damage *= 1.48;
+      }
+
+      state.currentTarget.hp = Math.max(0, state.currentTarget.hp - damage);
+
+      flashHit();
+
+      if (state.currentTarget.hp <= 0) {
+        collectReward(state.currentTarget, tool);
+        removeInteractable(state.currentTarget);
+        state.currentTarget = null;
+      } else {
+        showMessage(tool.name + " zasáhl objekt. HP: " + Math.ceil(state.currentTarget.hp));
+      }
+    }
+
+    function interact() {
+      if (state.currentTarget && state.currentTarget.openable) {
+        openCrate(state.currentTarget);
+        return;
+      }
+
+      if (isNearWater()) {
+        player.thirst = clamp(player.thirst + 35, 0, 100);
+        showMessage("Napil ses vody. Žízeň +35");
+        addResourceFeed("💧 voda +35");
+        return;
+      }
+
+      if (player.waterBottle > 0) {
+        player.waterBottle -= 1;
+        player.thirst = clamp(player.thirst + 55, 0, 100);
+        showMessage("Vypil jsi water bottle. Žízeň +55");
+        addResourceFeed("💧 water bottle -1");
+        renderInventory();
+        return;
+      }
+
+      showMessage("Tady není co otevřít ani kde se napít.");
+    }
+
+    function openCrate(crate) {
+      if (crate.opened) return;
+
+      crate.opened = true;
+
+      const parts = [];
+
+      Object.keys(crate.loot).forEach(function (key) {
+        const amount = crate.loot[key];
+
+        player[key] += amount;
+
+        parts.push(resourceName(key) + " +" + amount);
+        addResourceFeed(resourceIcon(key) + " " + resourceName(key) + " +" + amount);
+      });
+
+      showMessage("Otevřel jsi bednu: " + parts.join(", "));
+
+      removeInteractable(crate);
+      state.currentTarget = null;
+
+      renderInventory();
+      renderCrafting();
+    }
+
+    function collectReward(item, tool) {
+      const multiplier = tool.gather || 1;
+      const parts = [];
+
+      Object.keys(item.reward).forEach(function (key) {
+        let amount = item.reward[key];
+
+        if (key !== "hunger") {
+          amount = Math.ceil(amount * multiplier);
+        }
+
+        if (key === "hunger") {
+          player.hunger = clamp(player.hunger + amount, 0, 100);
+        } else {
+          player[key] += amount;
+        }
+
+        parts.push(resourceName(key) + " +" + amount);
+        addResourceFeed(resourceIcon(key) + " " + resourceName(key) + " +" + amount);
+      });
+
+      showMessage("Získal jsi: " + parts.join(", "));
+
+      renderInventory();
+      renderCrafting();
+    }
+
+    function removeInteractable(item) {
+      scene.remove(item.object);
+
+      const index = interactables.indexOf(item);
+
+      if (index !== -1) {
+        interactables.splice(index, 1);
+      }
+
+      for (let i = rayTargets.length - 1; i >= 0; i--) {
+        if (rayTargets[i].userData.interactable === item) {
+          rayTargets.splice(i, 1);
+        }
+      }
+    }
+
+    function onKeyDown(e) {
+      if (state.waitingForBind) {
+        e.preventDefault();
+
+        keybinds[state.waitingForBind] = e.code;
+        state.waitingForBind = null;
+
+        ui.bindInfo.textContent = "Klávesa byla změněna.";
+
+        renderSettings();
+
+        return;
+      }
+
+      if ([keybinds.inventory, "KeyI", keybinds.map, keybinds.settings].includes(e.code)) {
+        e.preventDefault();
+      }
+
+      if (e.code === keybinds.inventory || e.code === "KeyI") {
+        toggleInventory();
+        return;
+      }
+
+      if (e.code === keybinds.map) {
+        toggleMap();
+        return;
+      }
+
+      if (e.code === keybinds.settings) {
+        toggleSettings();
+        return;
+      }
+
+      if (e.code === keybinds.interact) {
+        interact();
+        return;
+      }
+
+      if (e.code === keybinds.jump && player.grounded && !state.paused) {
+        player.velocityY = JUMP_POWER;
+        player.grounded = false;
+        return;
+      }
+
+      keys[e.code] = true;
+
+      if (e.code === "Digit1") selectTool(0);
+      if (e.code === "Digit2") selectTool(1);
+      if (e.code === "Digit3") selectTool(2);
+      if (e.code === "Digit4") selectTool(3);
+      if (e.code === "Digit5") selectTool(4);
+    }
+
+    function onMouseMove(e) {
+      if (
+        state.paused ||
+        state.inventoryOpen ||
+        state.mapOpen ||
+        state.settingsOpen ||
+        document.pointerLockElement !== document.body
+      ) {
+        return;
+      }
+
+      player.yaw -= e.movementX * 0.0023;
+      player.pitch -= e.movementY * 0.0023;
+      player.pitch = clamp(player.pitch, -1.28, 1.28);
+    }
+
+    function selectTool(index) {
+      if (player.selectedSlot === index) return;
+
+      player.selectedSlot = index;
+      heldState.switch = 0.24;
+
+      setHeldToolModel(tools[index].id, true);
+      renderHotbar();
+    }
+
+    function toggleInventory(forceOpen) {
+      state.inventoryOpen = forceOpen ? true : !state.inventoryOpen;
+      state.mapOpen = false;
+      state.settingsOpen = false;
+
+      ui.inventoryOverlay.style.display = state.inventoryOpen ? "flex" : "none";
+      ui.mapOverlay.style.display = "none";
+      ui.settingsOverlay.style.display = "none";
+      ui.pauseOverlay.style.display = "none";
+
+      if (state.inventoryOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.inventoryOpen) {
+        resumeGame();
+      }
+
+      renderInventory();
+      renderCrafting();
+    }
+
+    function toggleMap(forceOpen) {
+      state.mapOpen = forceOpen ? true : !state.mapOpen;
+      state.inventoryOpen = false;
+      state.settingsOpen = false;
+
+      ui.mapOverlay.style.display = state.mapOpen ? "flex" : "none";
+      ui.inventoryOverlay.style.display = "none";
+      ui.settingsOverlay.style.display = "none";
+      ui.pauseOverlay.style.display = "none";
+
+      if (state.mapOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.mapOpen) {
+        resumeGame();
+      }
+
+      drawBigMap();
+    }
+
+    function toggleSettings(forceOpen) {
+      state.settingsOpen = forceOpen ? true : !state.settingsOpen;
+      state.inventoryOpen = false;
+      state.mapOpen = false;
+
+      ui.settingsOverlay.style.display = state.settingsOpen ? "flex" : "none";
+      ui.inventoryOverlay.style.display = "none";
+      ui.mapOverlay.style.display = "none";
+      ui.pauseOverlay.style.display = "none";
+
+      if (state.settingsOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.settingsOpen) {
+        resumeGame();
+      }
+
+      renderSettings();
+    }
+
+    function toggleGraphic(name) {
+      graphics[name] = !graphics[name];
+
+      applyGraphics();
+      renderSettings();
+      updateMenuButtons();
+    }
+
+    function updateMenuButtons() {
+      const shaderButton = document.getElementById("menuShaderBtn");
+      const fogButton = document.getElementById("menuFogBtn");
+      const shadowButton = document.getElementById("menuShadowBtn");
+
+      shaderButton.textContent = "Shadery: " + (graphics.shaders ? "zapnuto" : "vypnuto");
+      fogButton.textContent = "Mlha: " + (graphics.fog ? "zapnuto" : "vypnuto");
+      shadowButton.textContent = "Stíny: " + (graphics.shadows ? "zapnuto" : "vypnuto");
+
+      shaderButton.className = "smallBtn" + (graphics.shaders ? " active" : "");
+      fogButton.className = "smallBtn" + (graphics.fog ? " active" : "");
+      shadowButton.className = "smallBtn" + (graphics.shadows ? " active" : "");
+    }
+
+    updateMenuButtons();
+
+    function applyGraphics() {
+      if (!renderer) return;
+
+      renderer.shadowMap.enabled = graphics.shadows;
+      renderer.toneMappingExposure = graphics.shaders ? 1.05 : 0.92;
+      scene.fog = graphics.fog ? new THREE.Fog(0x88bff0, 95, 340) : null;
+
+      ui.compass.style.display = graphics.compass && state.started ? "block" : "none";
+      ui.miniMapPanel.style.display = graphics.minimap && state.started ? "block" : "none";
+    }
+
+    function renderHotbar() {
+      ui.hotbar.innerHTML = "";
+
+      tools.forEach(function (tool, index) {
+        const slot = document.createElement("div");
+
+        slot.className = "slot" + (index === player.selectedSlot ? " active" : "");
+
+        slot.innerHTML =
+          "<div class='key'>" +
+          (index + 1) +
+          "</div><div class='emoji'>" +
+          tool.icon +
+          "</div><div class='name'>" +
+          tool.name +
+          "</div>";
+
+        ui.hotbar.appendChild(slot);
+      });
+    }
+
+    function renderInventory() {
+      const items = [
+        ["wood", "Dřevo", "🪵", player.wood],
+        ["stone", "Kámen", "🪨", player.stone],
+        ["metalOre", "Metal ore", "⛓️", player.metalOre],
+        ["sulfurOre", "Sulfur ore", "🟡", player.sulfurOre],
+        ["cloth", "Látka", "🌿", player.cloth],
+        ["scrap", "Scrap", "⚙️", player.scrap],
+        ["lowGradeFuel", "Low grade fuel", "🛢️", player.lowGradeFuel],
+        ["animalFat", "Animal fat", "🥩", player.animalFat],
+        ["mushrooms", "Houby", "🍄", player.mushrooms],
+        ["waterBottle", "Water bottle", "💧", player.waterBottle]
+      ];
+
+      ui.inventoryGrid.innerHTML = "";
+
+      items.forEach(function (item) {
+        const name = item[1];
+        const icon = item[2];
+        const value = item[3];
+
+        const card = document.createElement("div");
+        card.className = "itemCard";
+
+        card.innerHTML =
+          "<div class='itemIcon'>" +
+          icon +
+          "</div><div><strong>" +
+          name +
+          "</strong><span>Množství: " +
+          value +
+          "</span></div>";
+
+        ui.inventoryGrid.appendChild(card);
+      });
+    }
+
+    function renderCrafting() {
+      ui.craftingGrid.innerHTML = "";
+
+      recipes.forEach(function (recipe) {
+        const canCraft = canAfford(recipe.cost);
+
+        const card = document.createElement("div");
+        card.className = "itemCard clickable" + (canCraft ? "" : " disabled");
+
+        card.innerHTML =
+          "<div class='itemIcon'>" +
+          recipe.icon +
+          "</div><div><strong>" +
+          recipe.name +
+          "</strong><span>" +
+          recipe.description +
+          "<br>Potřeba: " +
+          costText(recipe.cost) +
+          "</span></div>";
+
+        card.addEventListener("click", function () {
+          craft(recipe);
+        });
+
+        ui.craftingGrid.appendChild(card);
+      });
+    }
+
+    function renderSettings() {
+      const buttons = [
+        ["shaderBtn", "shaders", "Shadery"],
+        ["fogBtn", "fog", "Mlha"],
+        ["shadowBtn", "shadows", "Stíny"],
+        ["minimapBtn", "minimap", "Minimapa"],
+        ["compassBtn", "compass", "Kompas"]
+      ];
+
+      buttons.forEach(function (item) {
+        const id = item[0];
+        const key = item[1];
+        const label = item[2];
+
+        const button = document.getElementById(id);
+
+        button.textContent = label + ": " + (graphics[key] ? "zapnuto" : "vypnuto");
+        button.className = "smallBtn" + (graphics[key] ? " active" : "");
+
+        if (!button.dataset.bound) {
+          button.addEventListener("click", function () {
+            toggleGraphic(key);
+          });
+
+          button.dataset.bound = "1";
+        }
+      });
+
+      ui.keybindGrid.innerHTML = "";
+
+      Object.keys(keybinds).forEach(function (key) {
+        const row = document.createElement("div");
+
+        row.className = "bindRow";
+
+        row.innerHTML =
+          "<span>" +
+          keybindLabels[key] +
+          "</span><button class='bindKey'>" +
+          prettyKey(keybinds[key]) +
+          "</button>";
+
+        row.querySelector("button").addEventListener("click", function () {
+          state.waitingForBind = key;
+          ui.bindInfo.textContent = "Stiskni novou klávesu pro: " + keybindLabels[key];
+        });
+
+        ui.keybindGrid.appendChild(row);
+      });
+    }
+
+    function craft(recipe) {
+      if (!canAfford(recipe.cost)) {
+        showMessage("Nemáš dost surovin na: " + recipe.name);
+        return;
+      }
+
+      Object.keys(recipe.cost).forEach(function (key) {
+        player[key] -= recipe.cost[key];
+      });
+
+      recipe.do();
+
+      renderInventory();
+      renderCrafting();
+      drawBigMap();
+    }
+
+    function canAfford(cost) {
+      return Object.keys(cost).every(function (key) {
+        return player[key] >= cost[key];
+      });
+    }
+
+    function movePlayer(delta) {
+      let forward = 0;
+      let side = 0;
+
+      if (keys[keybinds.forward]) forward += 1;
+      if (keys[keybinds.backward]) forward -= 1;
+      if (keys[keybinds.right]) side += 1;
+      if (keys[keybinds.left]) side -= 1;
+
+      const sprint = keys[keybinds.sprint] || keys.ShiftRight;
+      const speed = WALK_SPEED * (sprint ? SPRINT_MULT : 1);
+      const length = Math.hypot(forward, side);
+
+      if (length > 0) {
+        forward /= length;
+        side /= length;
+
+        const sin = Math.sin(player.yaw);
+        const cos = Math.cos(player.yaw);
+
+        player.x += (-sin * forward + cos * side) * speed * delta;
+        player.z += (-cos * forward - sin * side) * speed * delta;
+      }
+
+      const distance = Math.hypot(player.x, player.z);
+
+      if (distance > ISLAND_RADIUS - 8) {
+        player.x *= (ISLAND_RADIUS - 8) / distance;
+        player.z *= (ISLAND_RADIUS - 8) / distance;
+      }
+
+      player.velocityY -= GRAVITY * delta;
+      player.airY += player.velocityY * delta;
+
+      if (player.airY <= 0) {
+        player.airY = 0;
+        player.velocityY = 0;
+        player.grounded = true;
+      }
+
+      player.y = EYE_HEIGHT + player.airY;
+
+      if (length > 0) {
+        heldState.bob += delta * (sprint ? 11 : 8);
+      } else {
+        heldState.bob += delta * 2;
+      }
+    }
+
+    function updateCamera() {
+      camera.position.set(player.x, player.y, player.z);
+      camera.rotation.order = "YXZ";
+      camera.rotation.y = player.yaw;
+      camera.rotation.x = player.pitch;
+    }
+
+    function updateSurvival(delta) {
+      player.hunger = clamp(player.hunger - delta * (100 / 600), 0, 100);
+      player.thirst = clamp(player.thirst - delta * (100 / 420), 0, 100);
+
+      if (player.hunger <= 0) {
+        player.health = clamp(player.health - delta * 1.6, 0, 100);
+      }
+
+      if (player.thirst <= 0) {
+        player.health = clamp(player.health - delta * 2.4, 0, 100);
+      }
+    }
+
+    function updateHazards(delta) {
+      hazardZones.forEach(function (zone) {
+        const distance = Math.hypot(player.x - zone.x, player.z - zone.z);
+
+        if (distance < zone.radius) {
+          player.health = clamp(player.health - zone.damage * delta, 0, 100);
+          showMessage("Stojíš v ohni! Dostáváš damage.");
+        }
+      });
+    }
+
+    function updateDayNight(delta) {
+      state.dayTimer += delta * 0.022;
+
+      const t = (Math.sin(state.dayTimer) + 1) / 2;
+
+      sunLight.intensity = 0.36 + t * 1.8;
+      ambientLight.intensity = 0.28 + t * 0.58;
+
+      renderer.toneMappingExposure = graphics.shaders ? 0.68 + t * 0.42 : 0.92;
+    }
+
+    function updateAnimatedObjects(delta) {
+      state.time += delta;
+
+      animatedObjects.forEach(function (item) {
+        if (item.type === "water") {
+          item.object.rotation.z += delta * 0.01;
+        } else if (item.type === "cloud") {
+          item.object.position.x += item.speed * delta;
+
+          if (item.object.position.x > 250) {
+            item.object.position.x = -250;
+          }
+        } else if (item.type === "fire") {
+          item.object.scale.y = 1 + Math.sin(state.time * 12) * 0.12;
+        } else if (item.type === "heldFlame") {
+          item.object.scale.y = 1 + Math.sin(state.time * 13) * 0.1;
+        } else if (item.type === "animal") {
+          item.object.position.x += Math.sin(item.dir) * item.speed * delta;
+          item.object.position.z += Math.cos(item.dir) * item.speed * delta;
+          item.object.rotation.y = item.dir;
+
+          if (Math.random() < 0.01) {
+            item.dir += rand(-0.8, 0.8);
+          }
+
+          if (Math.hypot(item.object.position.x, item.object.position.z) > ISLAND_RADIUS - 18) {
+            item.dir += Math.PI;
+          }
+        }
+      });
+    }
+
+    function updateHeldTool(delta) {
+      if (!heldGroup) return;
+
+      const moving =
+        keys[keybinds.forward] ||
+        keys[keybinds.backward] ||
+        keys[keybinds.left] ||
+        keys[keybinds.right];
+
+      const bob = moving
+        ? Math.sin(heldState.bob * 1.6) * 0.03
+        : Math.sin(heldState.bob * 0.8) * 0.01;
+
+      const bobY = moving
+        ? Math.abs(Math.cos(heldState.bob * 1.6)) * 0.02
+        : 0;
+
+      let swingRot = 0;
+      let swingPos = 0;
+
+      if (heldState.swing > 0) {
+        const progress = 1 - heldState.swing / 0.18;
+
+        swingRot = Math.sin(progress * Math.PI) * -1.05;
+        swingPos = Math.sin(progress * Math.PI) * 0.12;
+
+        heldState.swing = Math.max(0, heldState.swing - delta);
+      }
+
+      let switchDrop = 0;
+
+      if (heldState.switch > 0) {
+        const progress = 1 - heldState.switch / 0.24;
+
+        switchDrop = Math.sin(progress * Math.PI) * 0.28;
+
+        heldState.switch = Math.max(0, heldState.switch - delta);
+      }
+
+      heldGroup.position.set(
+        0.62 + bob,
+        -0.66 - bobY + switchDrop + swingPos,
+        -1.08
+      );
+
+      heldGroup.rotation.set(
+        -0.16 + swingRot,
+        0.35,
+        -0.18 + swingRot * 0.25
+      );
+    }
+
+    function setHeldToolModel(toolId, animateSwitch) {
+      Object.keys(heldModels).forEach(function (key) {
+        heldModels[key].visible = key === toolId;
+      });
+
+      if (animateSwitch) {
+        heldState.switch = 0.24;
+      }
+
+      torchLight.intensity = toolId === "torch" ? 2.4 : 0;
+    }
+
+    function updateUI() {
+      ui.vitalHp.style.width = player.health + "%";
+      ui.vitalFood.style.width = player.hunger + "%";
+      ui.vitalWater.style.width = player.thirst + "%";
+
+      ui.vitalHpText.textContent = Math.round(player.health);
+      ui.vitalFoodText.textContent = Math.round(player.hunger);
+      ui.vitalWaterText.textContent = Math.round(player.thirst);
+
+      const degrees = ((-player.yaw * 180 / Math.PI) % 360 + 360) % 360;
+      const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+      ui.compassText.textContent =
+        directions[Math.round(degrees / 45) % 8] + " " + Math.round(degrees) + "°";
+    }
+
+    function showMessage(text) {
+      ui.centerMessage.textContent = text;
+    }
+
+    function addResourceFeed(text) {
+      const item = document.createElement("div");
+      item.className = "feedItem";
+      item.textContent = text;
+
+      ui.resourceFeed.prepend(item);
+
+      setTimeout(function () {
+        item.remove();
+      }, 2700);
+    }
+
+    function flashHit() {
+      ui.hitMarker.classList.remove("active");
+      void ui.hitMarker.offsetWidth;
+      ui.hitMarker.classList.add("active");
+    }
+
+    function drawMiniMap() {
+      drawMap(miniMapCtx, ui.miniMapCanvas.width, ui.miniMapCanvas.height, true);
+    }
+
+    function drawBigMap() {
+      drawMap(bigMapCtx, ui.bigMapCanvas.width, ui.bigMapCanvas.height, false);
+    }
+
+    function drawMap(ctx, width, height, small) {
+      ctx.clearRect(0, 0, width, height);
+
+      const center = width / 2;
+      const radius = width * 0.43;
+      const zoom = small ? 1 : state.mapZoom;
+      const scale = (radius / ISLAND_RADIUS) * zoom;
+
+      ctx.fillStyle = "#0b1930";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius * zoom, 0, Math.PI * 2);
+      ctx.fillStyle = "#2d6ed0";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius * 0.82 * zoom, 0, Math.PI * 2);
+      ctx.fillStyle = "#497f39";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius * 0.55 * zoom, 0, Math.PI * 2);
+      ctx.fillStyle = "#3e6f33";
+      ctx.fill();
+
+      if (!small) {
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "13px Arial";
+        ctx.fillText("Zoom: " + state.mapZoom.toFixed(1) + "x", 18, 26);
+      }
+
+      mapMarkers.forEach(function (marker) {
+        const p = worldToMap(marker.x, marker.z, center, scale);
+
+        ctx.fillStyle = markerColor(marker.kind);
+
+        ctx.beginPath();
+        ctx.arc(
+          p.x,
+          p.y,
+          marker.kind === "monument" ? (small ? 3 : 6) : (small ? 2 : 4),
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        if (!small && marker.kind === "monument") {
+          ctx.fillStyle = "#f5f7fb";
+          ctx.font = "12px Arial";
+          ctx.fillText(marker.label, p.x + 8, p.y + 4);
+        }
+      });
+
+      if (state.waypoint) {
+        const wp = worldToMap(state.waypoint.x, state.waypoint.z, center, scale);
+
+        ctx.strokeStyle = "#ff3b3b";
+        ctx.lineWidth = small ? 2 : 4;
+
+        ctx.beginPath();
+        ctx.moveTo(wp.x - 8, wp.y - 8);
+        ctx.lineTo(wp.x + 8, wp.y + 8);
+        ctx.moveTo(wp.x + 8, wp.y - 8);
+        ctx.lineTo(wp.x - 8, wp.y + 8);
+        ctx.stroke();
+      }
+
+      const playerPoint = worldToMap(player.x, player.z, center, scale);
+
+      ctx.save();
+      ctx.translate(playerPoint.x, playerPoint.y);
+      ctx.rotate(-player.yaw);
+      ctx.fillStyle = "#ffd062";
+
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(6, 8);
+      ctx.lineTo(0, 5);
+      ctx.lineTo(-6, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function mapMouseToWorld(event) {
+      const rect = ui.bigMapCanvas.getBoundingClientRect();
+
+      const px = (event.clientX - rect.left) * (ui.bigMapCanvas.width / rect.width);
+      const py = (event.clientY - rect.top) * (ui.bigMapCanvas.height / rect.height);
+
+      const center = ui.bigMapCanvas.width / 2;
+      const radius = ui.bigMapCanvas.width * 0.43;
+      const scale = (radius / ISLAND_RADIUS) * state.mapZoom;
+
+      return {
+        x: (px - center) / scale,
+        z: (py - center) / scale
+      };
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!clock || !renderer) return;
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      const running =
+        state.started &&
+        !state.paused &&
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen;
+
+      if (running) {
+        movePlayer(delta);
+        updateSurvival(delta);
+        updateHazards(delta);
+        updateDayNight(delta);
+        updateAnimatedObjects(delta);
+      }
+
+      updateCamera();
+      updateTarget();
+      updateHeldTool(delta);
+      updateUI();
+
+      if (graphics.minimap) {
+        drawMiniMap();
+      }
+
+      if (state.mapOpen) {
+        drawBigMap();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function terrainHeight(x, z) {
+      /*
+        NEJDŮLEŽITĚJŠÍ FIX:
+        Mapa je stabilní a rovná.
+        Žádné výšky = žádné létající struktury.
+      */
+      return 0;
+    }
+
+    function placeOnGround(object, x, z, yOffset) {
+      /*
+        Stabilní pokládání objektů.
+        Žádný bounding box.
+        Žádné dodatečné přepočítávání výšky.
+      */
+      object.position.set(x, terrainHeight(x, z) + yOffset, z);
+    }
+
+    function randomIslandPoint() {
+      const angle = rand(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random()) * (ISLAND_RADIUS - 18);
+
+      return {
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius
+      };
+    }
+
+    function riverX(z) {
+      return Math.sin(z * 0.035) * 20 - 18;
+    }
+
+    function isNearWater() {
+      const coast = Math.hypot(player.x, player.z) > ISLAND_RADIUS - 16;
+
+      const riverDistance = Math.abs(player.x - riverX(player.z));
+      const inRiverLength = player.z > -160 && player.z < 160;
+      const river = riverDistance < 8 && inRiverLength;
+
+      return coast || river;
+    }
+
+    function getWorldPos(object) {
+      const vector = new THREE.Vector3();
+      object.getWorldPosition(vector);
+      return vector;
+    }
+
+    function worldToMap(x, z, center, scale) {
+      return {
+        x: center + x * scale,
+        y: center + z * scale
+      };
+    }
+
+    function markerColor(kind) {
+      const colors = {
+        monument: "#ffffff",
+        build: "#ffd062",
+        water: "#38bdf8",
+        wood: "#8b5a2b",
+        stone: "#d1d5db",
+        metalOre: "#ff8c3b",
+        sulfurOre: "#ffe45e",
+        loot: "#38bdf8",
+        rareLoot: "#60a5fa",
+        lootCrate: "#38bdf8",
+        cloth: "#22c55e",
+        food: "#ef4444"
+      };
+
+      return colors[kind] || "#ffffff";
+    }
+
+    function resourceName(key) {
+      const names = {
+        wood: "dřevo",
+        stone: "kámen",
+        metalOre: "metal ore",
+        sulfurOre: "sulfur ore",
+        cloth: "látka",
+        scrap: "scrap",
+        lowGradeFuel: "low grade fuel",
+        animalFat: "animal fat",
+        mushrooms: "houby",
+        waterBottle: "water bottle",
+        hunger: "jídlo"
+      };
+
+      return names[key] || key;
+    }
+
+    function resourceIcon(key) {
+      const icons = {
+        wood: "🪵",
+        stone: "🪨",
+        metalOre: "⛓️",
+        sulfurOre: "🟡",
+        cloth: "🌿",
+        scrap: "⚙️",
+        lowGradeFuel: "🛢️",
+        animalFat: "🥩",
+        mushrooms: "🍄",
+        waterBottle: "💧",
+        hunger: "🍗"
+      };
+
+      return icons[key] || "➕";
+    }
+
+    function costText(cost) {
+      return Object.keys(cost)
+        .map(function (key) {
+          return resourceName(key) + " " + cost[key];
+        })
+        .join(", ");
+    }
+
+    function prettyKey(code) {
+      const names = {
+        KeyW: "W",
+        KeyA: "A",
+        KeyS: "S",
+        KeyD: "D",
+        KeyE: "E",
+        KeyM: "M",
+        KeyO: "O",
+        Tab: "Tab",
+        ShiftLeft: "Levý Shift",
+        ShiftRight: "Pravý Shift",
+        Space: "Mezerník"
+      };
+
+      if (names[code]) return names[code];
+      if (code.startsWith("Key")) return code.replace("Key", "");
+      if (code.startsWith("Digit")) return code.replace("Digit", "");
+
+      return code;
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function randInt(min, max) {
+      return Math.floor(rand(min, max + 1));
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function onResize() {
+      if (!camera || !renderer) return;
+
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+  </script>
+</body>
+</html>
