@@ -1,0 +1,5771 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Farken's World - Beta 0.3.1</title>
+
+  <style>
+    :root {
+      --bg: #08111f;
+      --bg2: #0d1a2f;
+      --panel: rgba(10, 20, 40, 0.86);
+      --panel-strong: rgba(10, 18, 34, 0.95);
+      --line: rgba(255, 255, 255, 0.08);
+      --line2: rgba(255, 255, 255, 0.14);
+      --text: #e8eefc;
+      --muted: #9fb1d2;
+      --accent: #f2a31a;
+      --accent2: #ffd56d;
+      --danger: #ff5e5e;
+      --ok: #84d44b;
+      --water: #4db8ff;
+      --shadow: 0 14px 40px rgba(0,0,0,0.35);
+      --glow: 0 0 18px rgba(242,163,26,0.22);
+      --radius: 18px;
+      --radius2: 12px;
+      --hudW: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top left, rgba(255,145,0,0.08), transparent 26%),
+        radial-gradient(circle at top right, rgba(0,140,255,0.10), transparent 20%),
+        linear-gradient(180deg, #06101c 0%, #08111f 100%);
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(8px);
+      background: rgba(3, 8, 18, 0.52);
+    }
+
+    .menuShell {
+      width: min(1280px, 96vw);
+      max-height: 92vh;
+      overflow: auto;
+      border-radius: 24px;
+      border: 1px solid var(--line2);
+      background:
+        linear-gradient(180deg, rgba(16,27,48,0.97), rgba(8,15,30,0.97));
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .menuGrid {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background:
+        linear-gradient(180deg, rgba(18,31,56,0.95), rgba(11,20,37,0.95));
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), var(--shadow);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent 25%, transparent 75%, rgba(255,255,255,0.03));
+    }
+
+    .heroTitle {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .heroLogo {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #f2a31a, #bd6d05);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: bold;
+      box-shadow: var(--glow);
+      flex: 0 0 auto;
+    }
+
+    .heroTitle h1 {
+      margin: 0;
+      font-size: clamp(34px, 4vw, 58px);
+      line-height: 1;
+      letter-spacing: -1px;
+      text-shadow: 0 0 20px rgba(255,255,255,0.05);
+    }
+
+    .betaText {
+      color: var(--accent2);
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    .subText {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 15px;
+      margin-top: 10px;
+    }
+
+    .tagRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: #dfe9ff;
+    }
+
+    .tag.accent { background: rgba(242,163,26,0.16); color: #ffcf78; }
+    .tag.ok { background: rgba(132,212,75,0.13); color: #bdf28b; }
+    .tag.info { background: rgba(77,184,255,0.14); color: #9ad7ff; }
+    .tag.danger { background: rgba(255,94,94,0.14); color: #ffaaaa; }
+
+    .controlsGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .controlCard {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .controlCard strong {
+      display: block;
+      font-size: 18px;
+      color: var(--accent2);
+      margin-bottom: 4px;
+    }
+
+    .controlCard span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .sectionTitle {
+      font-size: 26px;
+      margin: 0 0 14px;
+      color: #ffd451;
+      text-shadow: 0 0 16px rgba(242,163,26,0.12);
+    }
+
+    .sectionSub {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .mainButton {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 16px 20px;
+      font-size: 20px;
+      font-weight: bold;
+      background: linear-gradient(180deg, #f2a31a, #b86804);
+      color: white;
+      cursor: pointer;
+      box-shadow: var(--glow);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .mainButton:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .smallButton {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .smallButton:hover {
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .smallButton.active {
+      background: rgba(242,163,26,0.16);
+      border-color: rgba(242,163,26,0.34);
+      color: #ffd889;
+      box-shadow: 0 0 16px rgba(242,163,26,0.10);
+    }
+
+    .settingGroup {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .settingGroup h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      color: #ffe27f;
+    }
+
+    .settingHelp {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+
+    .buttonRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .changeLog {
+      max-height: 430px;
+      overflow: auto;
+      padding-right: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .changeGroup {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      padding: 12px;
+    }
+
+    .changeGroup h4 {
+      margin: 0 0 10px;
+      color: #ffd26d;
+      font-size: 16px;
+    }
+
+    .changeItem {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(8, 16, 30, 0.55);
+      border: 1px solid rgba(255,255,255,0.04);
+      margin-bottom: 8px;
+    }
+
+    .changeItem:last-child {
+      margin-bottom: 0;
+    }
+
+    .dotIcon {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.06);
+      font-size: 14px;
+    }
+
+    .changeItem span {
+      color: #dbe6fb;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .recommendBox {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,210,90,0.16);
+      background: linear-gradient(180deg, rgba(255,205,92,0.08), rgba(255,255,255,0.02));
+    }
+
+    .recommendBox h3 {
+      margin: 0 0 8px;
+      color: #ffd451;
+      font-size: 18px;
+    }
+
+    .recommendBox p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    #gameHud {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    #crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,0.92);
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.12);
+    }
+
+    #crosshair::before {
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 22px;
+      transform: translateX(-50%);
+    }
+
+    #crosshair::after {
+      top: 50%;
+      left: 0;
+      height: 2px;
+      width: 22px;
+      transform: translateY(-50%);
+    }
+
+    #topCompassWrap {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(640px, 64vw);
+      height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(18,31,56,0.92), rgba(11,20,37,0.94));
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    #compassTrack {
+      position: absolute;
+      inset: 0;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding: 0 50%;
+      will-change: transform;
+      transition: transform 0.06s linear;
+    }
+
+    .compassMark {
+      position: relative;
+      width: 40px;
+      flex: 0 0 40px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(230,240,255,0.45);
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .compassMark.big {
+      width: 64px;
+      flex-basis: 64px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.84);
+    }
+
+    .compassMark.active {
+      color: #ffd451;
+      text-shadow: 0 0 14px rgba(242,163,26,0.34);
+    }
+
+    .compassMark.waypoint {
+      color: #7ac7ff;
+    }
+
+    .compassTickLine {
+      position: absolute;
+      bottom: 7px;
+      left: 50%;
+      width: 2px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.32);
+      transform: translateX(-50%);
+      height: 8px;
+    }
+
+    .compassMark.big .compassTickLine {
+      height: 12px;
+      background: rgba(255,255,255,0.55);
+    }
+
+    #compassCenter {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      background: linear-gradient(180deg, rgba(255,212,81,0.0), rgba(255,212,81,0.95), rgba(255,212,81,0.0));
+      box-shadow: 0 0 12px rgba(255,212,81,0.45);
+      z-index: 2;
+    }
+
+    #compassReadout {
+      position: absolute;
+      left: 50%;
+      top: 3px;
+      transform: translateX(-50%);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.24);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: bold;
+      z-index: 3;
+    }
+
+    #waypointReadout {
+      position: absolute;
+      right: 10px;
+      top: 7px;
+      font-size: 11px;
+      color: #7ac7ff;
+      font-weight: bold;
+      z-index: 3;
+      text-shadow: 0 0 8px rgba(122,199,255,0.2);
+    }
+
+    #fpsCounter {
+      position: absolute;
+      left: 12px;
+      top: 18px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(10,20,40,0.78);
+      border: 1px solid var(--line);
+      color: #f2f7ff;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: var(--shadow);
+    }
+
+    #miniMapPanel {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      width: 132px;
+      height: 132px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(18,31,56,0.92), rgba(11,20,37,0.94));
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+      padding: 8px;
+    }
+
+    #miniMapCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 14px;
+      background: #11233b;
+      display: block;
+    }
+
+    #targetPanel {
+      position: absolute;
+      left: 50%;
+      bottom: 164px;
+      transform: translateX(-50%);
+      min-width: 280px;
+      max-width: 420px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(10,20,40,0.84);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    #targetName {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ffd978;
+      margin-bottom: 4px;
+    }
+
+    #targetText {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .bar {
+      width: 100%;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .bar > div {
+      height: 100%;
+      width: 40%;
+      border-radius: 999px;
+      transition: width 0.14s ease;
+    }
+
+    #targetFill {
+      background: linear-gradient(90deg, #ff7c3a, #ffb14a);
+    }
+
+    #resourceFeed {
+      position: absolute;
+      right: 18px;
+      top: 170px;
+      width: 250px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feedItem {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(10,20,40,0.78);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      color: #e8eefc;
+      font-size: 13px;
+      animation: feedIn 0.18s ease;
+    }
+
+    @keyframes feedIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    #centerMessage {
+      position: absolute;
+      left: 50%;
+      bottom: 98px;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(10,20,40,0.84);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      font-size: 14px;
+      color: #edf2ff;
+      white-space: nowrap;
+      max-width: 80vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #hotbarWrap {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #hotbarInfo {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(10,20,40,0.84);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #hotbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 18px;
+      background: rgba(10,20,40,0.88);
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+    }
+
+    .slot {
+      width: 74px;
+      height: 74px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      transition: 0.15s ease;
+    }
+
+    .slot.active {
+      border-color: rgba(242,163,26,0.45);
+      box-shadow: inset 0 0 0 1px rgba(242,163,26,0.22), 0 0 18px rgba(242,163,26,0.10);
+      background: rgba(242,163,26,0.07);
+    }
+
+    .slotKey {
+      position: absolute;
+      top: 5px;
+      left: 7px;
+      font-size: 11px;
+      color: #d1dcf2;
+      opacity: 0.86;
+    }
+
+    .slotIcon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .slotName {
+      font-size: 11px;
+      color: #dce7fa;
+    }
+
+    #statsPanel {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      width: var(--hudW);
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(10,20,40,0.86);
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+    }
+
+    .statRow {
+      display: grid;
+      grid-template-columns: 28px 1fr 54px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .statRow:last-child {
+      margin-bottom: 0;
+    }
+
+    .statIcon {
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .statValue {
+      text-align: right;
+      font-size: 13px;
+      color: #eef3ff;
+      font-weight: bold;
+    }
+
+    #statusText {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    #helpPanel {
+      position: absolute;
+      right: 18px;
+      bottom: 210px;
+      max-width: 400px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(10,20,40,0.84);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .panelOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(3, 8, 18, 0.58);
+      backdrop-filter: blur(8px);
+    }
+
+    .panelWindow {
+      width: min(1120px, 94vw);
+      max-height: 88vh;
+      overflow: auto;
+      border-radius: 24px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(13,24,44,0.98), rgba(8,15,30,0.98));
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+    }
+
+    .panelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panelHeader h2 {
+      margin: 0;
+      font-size: 32px;
+      color: #ffd451;
+    }
+
+    .panelClose {
+      pointer-events: auto;
+      border: none;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    .inventoryLayout {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 16px;
+    }
+
+    .itemGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .itemCard {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      min-height: 82px;
+    }
+
+    .itemCard.clickable {
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .itemCard.clickable:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+      transform: translateY(-1px);
+    }
+
+    .itemCard.disabled {
+      opacity: 0.38;
+      filter: grayscale(0.15);
+    }
+
+    .itemCard.active {
+      border-color: rgba(242,163,26,0.38);
+      background: rgba(242,163,26,0.08);
+      box-shadow: 0 0 14px rgba(242,163,26,0.10);
+    }
+
+    .itemIcon {
+      font-size: 30px;
+      width: 42px;
+      text-align: center;
+      flex: 0 0 auto;
+    }
+
+    .itemCard strong {
+      display: block;
+      color: #edf4ff;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .itemCard span {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      display: block;
+    }
+
+    .bindGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .bindRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .bindRow span {
+      font-size: 14px;
+      color: #e4ebfa;
+    }
+
+    .bindButton {
+      pointer-events: auto;
+      border: 1px solid var(--line2);
+      background: rgba(255,255,255,0.06);
+      color: white;
+      border-radius: 10px;
+      padding: 9px 12px;
+      min-width: 110px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #bindInfo {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #bigMapCanvas {
+      width: 100%;
+      max-width: 860px;
+      aspect-ratio: 1 / 1;
+      display: block;
+      margin: 0 auto;
+      background: #11233b;
+      border-radius: 20px;
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+    }
+
+        .mapButtons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    #pauseActions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+      pointer-events: auto;
+    }
+
+    #hitMarker {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 84px;
+      height: 84px;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: 0.08s ease;
+    }
+
+    #hitMarker.active {
+      opacity: 1;
+    }
+
+    #hitMarker::before,
+    #hitMarker::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-top: 2px solid rgba(255,255,255,0.92);
+      transform: rotate(45deg);
+      transform-origin: center;
+    }
+
+    #hitMarker::after {
+      transform: rotate(-45deg);
+    }
+
+    @media (max-width: 980px) {
+      .menuGrid,
+      .inventoryLayout {
+        grid-template-columns: 1fr;
+      }
+
+      .controlsGrid,
+      .itemGrid,
+      .bindGrid {
+        grid-template-columns: 1fr;
+      }
+
+      #statsPanel {
+        width: 280px;
+      }
+
+      #topCompassWrap {
+        width: 82vw;
+      }
+
+      #miniMapPanel {
+        width: 112px;
+        height: 112px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="menuOverlay" class="overlay">
+    <div class="menuShell">
+      <div class="menuGrid">
+        <div class="card">
+          <div class="heroTitle">
+            <div class="heroLogo">🛢️</div>
+            <div>
+              <h1>Farken's World</h1>
+              <div class="betaText">Beta 0.3.1 – Ground Fix Update</div>
+            </div>
+          </div>
+
+          <div class="subText">
+            Survival sandbox inspirovaný Rust style gameplayem. Tahle verze opravuje hlavně
+            <strong>levitující stromy, struktury, budovy, řeku a silnici</strong>.
+            Objekty se teď pokládají podle výšky terénu přes jednotný systém.
+          </div>
+
+          <div class="tagRow">
+            <div class="tag accent">ground fix</div>
+            <div class="tag info">silnice + řeka</div>
+            <div class="tag ok">lepší kompas</div>
+            <div class="tag danger">oprava levitace</div>
+            <div class="tag">Beta 0.3.1</div>
+          </div>
+
+          <h2 class="sectionTitle">Základní ovládání</h2>
+
+          <div class="controlsGrid">
+            <div class="controlCard"><strong>W A S D</strong><span>Pohyb</span></div>
+            <div class="controlCard"><strong>Myš</strong><span>Rozhlížení</span></div>
+            <div class="controlCard"><strong>LPM</strong><span>Těžení / útok</span></div>
+            <div class="controlCard"><strong>E</strong><span>Otevřít / pít</span></div>
+            <div class="controlCard"><strong>Tab</strong><span>Inventář + crafting</span></div>
+            <div class="controlCard"><strong>M</strong><span>Mapa</span></div>
+            <div class="controlCard"><strong>O</strong><span>Nastavení</span></div>
+            <div class="controlCard"><strong>B</strong><span>Build menu</span></div>
+            <div class="controlCard"><strong>F</strong><span>Postavit díl</span></div>
+            <div class="controlCard"><strong>R</strong><span>Otočit build díl</span></div>
+            <div class="controlCard"><strong>H</strong><span>Použít bandage</span></div>
+            <div class="controlCard"><strong>Space</strong><span>Skok</span></div>
+          </div>
+
+          <div class="recommendBox">
+            <h3>Doporučené nastavení</h3>
+            <p>
+              Pro co nejvíc FPS nastav <strong>Performance = Low / Medium</strong>,
+              vypni stíny a dej render scale 0.75x. Pro lepší grafiku nech High,
+              zapni stíny, mlhu a vyšší hustotu objektů.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <button id="startGameButton" class="mainButton">Spustit Farken's World</button>
+
+          <div class="settingGroup">
+            <h3>Rychlé nastavení</h3>
+            <div class="settingHelp">
+              Tohle je jen rychlé nastavení přímo v menu. Kompletní nastavení najdeš i ve hře přes klávesu O.
+            </div>
+
+            <div class="settingGroup">
+              <h3>Performance preset</h3>
+              <div class="settingHelp">
+                Low = více FPS, méně objektů. Medium = kompromis. High = hezčí grafika.
+              </div>
+              <div class="buttonRow">
+                <button id="menuPerfLow" class="smallButton">Low</button>
+                <button id="menuPerfMedium" class="smallButton active">Medium</button>
+                <button id="menuPerfHigh" class="smallButton">High</button>
+              </div>
+            </div>
+
+            <div class="settingGroup">
+              <h3>Grafika</h3>
+              <div class="settingHelp">
+                Stíny a mlha vypadají dobře, ale můžou snižovat FPS. Render scale ovlivňuje ostrost.
+              </div>
+              <div class="buttonRow">
+                <button id="menuShadows" class="smallButton active">Stíny: zapnuto</button>
+                <button id="menuFog" class="smallButton active">Mlha: zapnuto</button>
+                <button id="menuShaders" class="smallButton active">Efekty: zapnuto</button>
+              </div>
+              <div class="buttonRow" style="margin-top:8px;">
+                <button id="menuScale075" class="smallButton">Render 0.75x</button>
+                <button id="menuScale1" class="smallButton active">Render 1.0x</button>
+                <button id="menuScale125" class="smallButton">Render 1.25x</button>
+              </div>
+            </div>
+
+            <div class="settingGroup">
+              <h3>Herní UI</h3>
+              <div class="settingHelp">
+                Zapíná / vypíná HUD prvky. Kompas je nově udělaný jako Rust styl.
+              </div>
+              <div class="buttonRow">
+                <button id="menuCompass" class="smallButton active">Kompas</button>
+                <button id="menuMinimap" class="smallButton active">Minimapa</button>
+                <button id="menuFps" class="smallButton active">FPS counter</button>
+                <button id="menuHelp" class="smallButton active">Help panel</button>
+              </div>
+            </div>
+          </div>
+
+          <h2 class="sectionTitle" style="margin-top:18px;">Historie updatu</h2>
+
+          <div id="menuChangelog" class="changeLog">
+            <div class="changeGroup">
+              <h4>Beta 0.3.1 – Ground Fix Update</h4>
+
+              <div class="changeItem">
+                <div class="dotIcon">🌍</div>
+                <span>Objekty se teď pokládají přes společný systém podle výšky terénu, aby nelevitovaly.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">🛣️</div>
+                <span>Silnice je předělaná na terrain ribbon, takže kopíruje terén a není jeden velký rovný kvádr.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">💧</div>
+                <span>Přidaná viditelná řeka s břehem, která se drží terénu.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">🏠</div>
+                <span>Budovy mají opravené položení na zem a vstupy nejsou zablokované jednou velkou kolizí.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">🧭</div>
+                <span>Kompas zůstává Rust-like: při otáčení se plynule posouvají světové strany.</span>
+              </div>
+            </div>
+
+            <div class="changeGroup">
+              <h4>Beta 0.3.0 – Terrain & Compass Rebuild</h4>
+
+              <div class="changeItem">
+                <div class="dotIcon">🧭</div>
+                <span>Přidán nový kompas inspirovaný Rustem – při otáčení se pod středem plynule posouvají směry.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">🏔️</div>
+                <span>Připravena nová základna pro rebuild terénu.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">⚙️</div>
+                <span>Rozšířený settings panel s vysvětlením, co je pro FPS a co pro lepší grafiku.</span>
+              </div>
+
+              <div class="changeItem">
+                <div class="dotIcon">🪓</div>
+                <span>Připravený crafting progres od rock + torch směrem ke stone nástrojům a dalším tierům.</span>
+              </div>
+            </div>
+
+            <div class="changeGroup">
+              <h4>Beta 0.2.1 – Road & Map Update</h4>
+              <div class="changeItem"><div class="dotIcon">🛣️</div><span>Přidaná silnice přes mapu s roadside loot spawnem okolo.</span></div>
+              <div class="changeItem"><div class="dotIcon">🛢️</div><span>Přidané barely: žlutý scrap barrel, modrý rare barrel, červený fuel barrel.</span></div>
+              <div class="changeItem"><div class="dotIcon">📦</div><span>Loot bedny kolem cesty a monumentů.</span></div>
+              <div class="changeItem"><div class="dotIcon">🗺️</div><span>Větší mapa a více míst k prozkoumání.</span></div>
+            </div>
+
+            <div class="changeGroup">
+              <h4>Beta 0.2.0 – Optimization, Buildings & Build System</h4>
+              <div class="changeItem"><div class="dotIcon">⚡</div><span>Optimalizace trávy, objektů, stínů a render scale.</span></div>
+              <div class="changeItem"><div class="dotIcon">🏠</div><span>Přidané budovy, build systém a performance presety.</span></div>
+              <div class="changeItem"><div class="dotIcon">🎮</div><span>HUD, minimapa, kompas, crafting, inventář a další survival prvky.</span></div>
+            </div>
+
+            <div class="changeGroup">
+              <h4>Starší změny</h4>
+              <div class="changeItem"><div class="dotIcon">🌲</div><span>Stromy, ore nody, zvířata, základní loot, oheň a survival systém.</span></div>
+              <div class="changeItem"><div class="dotIcon">🧪</div><span>Bandage, thirst, hunger, temperature, bleeding a hotbar nástrojů.</span></div>
+              <div class="changeItem"><div class="dotIcon">📍</div><span>Waypoint systém a jeho zobrazení na mapě i kompasu.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameHud" class="hidden">
+    <div id="fpsCounter">FPS: 0</div>
+
+    <div id="topCompassWrap">
+      <div id="compassReadout">N 0°</div>
+      <div id="waypointReadout" class="hidden">WP</div>
+      <div id="compassCenter"></div>
+      <div id="compassTrack"></div>
+    </div>
+
+    <div id="miniMapPanel">
+      <canvas id="miniMapCanvas" width="256" height="256"></canvas>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="hitMarker"></div>
+
+    <div id="targetPanel" class="hidden">
+      <div id="targetName">Objekt</div>
+      <div id="targetText">HP: 50 / 100</div>
+      <div class="bar">
+        <div id="targetFill"></div>
+      </div>
+    </div>
+
+    <div id="resourceFeed"></div>
+
+    <div id="helpPanel">
+      LPM = těžba / útok | E = otevřít / pít | Tab = inventář |
+      M = mapa | O = nastavení | B = build menu | F = postavit |
+      R = otočit | H = bandage | 1–5 = nástroje
+    </div>
+
+    <div id="centerMessage">Načítání...</div>
+
+    <div id="hotbarWrap">
+      <div id="hotbarInfo">Beta 0.3.1 | Ground fix + Rust-like compass</div>
+      <div id="hotbar"></div>
+    </div>
+
+    <div id="statsPanel">
+      <div class="statRow">
+        <div class="statIcon">❤</div>
+        <div class="bar"><div id="hpFill" style="background:linear-gradient(90deg,#ff6b52,#ff9a3e);width:100%;"></div></div>
+        <div id="hpText" class="statValue">100</div>
+      </div>
+
+      <div class="statRow">
+        <div class="statIcon">🍗</div>
+        <div class="bar"><div id="foodFill" style="background:linear-gradient(90deg,#8ccf42,#d8ef4f);width:100%;"></div></div>
+        <div id="foodText" class="statValue">100</div>
+      </div>
+
+      <div class="statRow">
+        <div class="statIcon">💧</div>
+        <div class="bar"><div id="waterFill" style="background:linear-gradient(90deg,#36a7ff,#78d6ff);width:100%;"></div></div>
+        <div id="waterText" class="statValue">100</div>
+      </div>
+
+      <div class="statRow">
+        <div class="statIcon">🌡️</div>
+        <div class="bar"><div id="tempFill" style="background:linear-gradient(90deg,#57b9ff,#ffcf54,#ff7d48);width:45%;"></div></div>
+        <div id="tempText" class="statValue">15°C</div>
+      </div>
+
+      <div class="statRow">
+        <div class="statIcon">🩸</div>
+        <div class="bar"><div id="bleedFill" style="background:linear-gradient(90deg,#ff4d6d,#cc2d4b);width:0%;"></div></div>
+        <div id="bleedText" class="statValue">0</div>
+      </div>
+
+      <div class="statRow">
+        <div class="statIcon">🩹</div>
+        <div class="bar"><div id="bandageFill" style="background:linear-gradient(90deg,#8de8ff,#58c4f7);width:0%;"></div></div>
+        <div id="bandageText" class="statValue">0</div>
+      </div>
+
+      <div id="statusText">Status: OK</div>
+    </div>
+  </div>
+
+  <div id="inventoryOverlay" class="panelOverlay hidden">
+    <div class="panelWindow">
+      <div class="panelHeader">
+        <div>
+          <h2>Inventář + crafting</h2>
+          <div class="sectionSub">Levá strana = tvoje suroviny, pravá = craftitelné itemy.</div>
+        </div>
+        <button id="closeInventoryButton" class="panelClose">Zavřít</button>
+      </div>
+
+      <div class="inventoryLayout">
+        <div>
+          <h3 class="sectionTitle" style="font-size:22px;">Suroviny a itemy</h3>
+          <div id="inventoryGrid" class="itemGrid"></div>
+        </div>
+
+        <div>
+          <h3 class="sectionTitle" style="font-size:22px;">Crafting</h3>
+          <div id="craftingGrid" class="itemGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="buildOverlay" class="panelOverlay hidden">
+    <div class="panelWindow">
+      <div class="panelHeader">
+        <div>
+          <h2>Build menu</h2>
+          <div class="sectionSub">Vyber díl, zavři menu a stiskni F pro postavení. R = otočení.</div>
+        </div>
+        <button id="closeBuildButton" class="panelClose">Zavřít</button>
+      </div>
+
+      <div id="buildGrid" class="itemGrid"></div>
+    </div>
+  </div>
+
+    <div id="mapOverlay" class="panelOverlay hidden">
+    <div class="panelWindow">
+      <div class="panelHeader">
+        <div>
+          <h2>Mapa</h2>
+          <div class="sectionSub">LPM = nastavit waypoint | kolečko = zoom | pravé tlačítko = smazat waypoint</div>
+        </div>
+        <button id="closeMapButton" class="panelClose">Zavřít</button>
+      </div>
+
+      <canvas id="bigMapCanvas" width="1024" height="1024"></canvas>
+
+      <div class="mapButtons">
+        <button id="zoomInMapButton" class="smallButton">Zoom +</button>
+        <button id="zoomOutMapButton" class="smallButton">Zoom -</button>
+        <button id="clearWaypointButton" class="smallButton">Smazat waypoint</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsOverlay" class="panelOverlay hidden">
+    <div class="panelWindow">
+      <div class="panelHeader">
+        <div>
+          <h2>Nastavení</h2>
+          <div class="sectionSub">Kompletní settings panel – výkon, grafika, UI i keybindy.</div>
+        </div>
+        <button id="closeSettingsButton" class="panelClose">Zavřít</button>
+      </div>
+
+      <div class="inventoryLayout">
+        <div>
+          <div class="settingGroup">
+            <h3>Performance preset</h3>
+            <div class="settingHelp">
+              Low = nejvíc FPS, méně objektů a detailů. Medium = vyvážené. High = nejlepší vzhled, ale větší nároky.
+            </div>
+            <div class="buttonRow">
+              <button id="perfLowButton" class="smallButton">Low</button>
+              <button id="perfMediumButton" class="smallButton active">Medium</button>
+              <button id="perfHighButton" class="smallButton">High</button>
+            </div>
+          </div>
+
+          <div class="settingGroup">
+            <h3>Render scale</h3>
+            <div class="settingHelp">
+              Větší hodnota = ostřejší obraz, ale nižší FPS. Když chceš víc FPS, dej 0.75x.
+            </div>
+            <div class="buttonRow">
+              <button id="scale075Button" class="smallButton">0.75x</button>
+              <button id="scale1Button" class="smallButton active">1.0x</button>
+              <button id="scale125Button" class="smallButton">1.25x</button>
+            </div>
+          </div>
+
+          <div class="settingGroup">
+            <h3>FOV</h3>
+            <div class="settingHelp">
+              Širší FOV = vidíš víc do stran. Nižší FOV = klidnější obraz.
+            </div>
+            <div class="buttonRow">
+              <button id="fov70Button" class="smallButton">70</button>
+              <button id="fov80Button" class="smallButton active">80</button>
+              <button id="fov90Button" class="smallButton">90</button>
+            </div>
+          </div>
+
+          <div class="settingGroup">
+            <h3>Hustota objektů</h3>
+            <div class="settingHelp">
+              Ovlivňuje počet stromů, trávy, keřů, loot objektů a zvířat. High vypadá líp, ale žere víc FPS.
+            </div>
+            <div class="buttonRow">
+              <button id="densityLowButton" class="smallButton">Low</button>
+              <button id="densityMediumButton" class="smallButton active">Medium</button>
+              <button id="densityHighButton" class="smallButton">High</button>
+            </div>
+          </div>
+
+          <div class="settingGroup">
+            <h3>Grafické prvky</h3>
+            <div class="settingHelp">
+              Stíny jsou největší zátěž. Když FPS padá pod 60, vypni stíny jako první.
+            </div>
+            <div class="buttonRow">
+              <button id="shaderButton" class="smallButton active">Efekty: zapnuto</button>
+              <button id="fogButton" class="smallButton active">Mlha: zapnuto</button>
+              <button id="shadowButton" class="smallButton active">Stíny: zapnuto</button>
+            </div>
+          </div>
+
+          <div class="settingGroup">
+            <h3>HUD / UI</h3>
+            <div class="settingHelp">
+              Zapínání a vypínání částí rozhraní.
+            </div>
+            <div class="buttonRow">
+              <button id="fpsButton" class="smallButton active">FPS counter</button>
+              <button id="minimapButton" class="smallButton active">Minimapa</button>
+              <button id="compassButton" class="smallButton active">Kompas</button>
+              <button id="helpButton" class="smallButton active">Help panel</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="settingGroup">
+            <h3>Keybindy</h3>
+            <div class="settingHelp">
+              Klikni na tlačítko a pak stiskni novou klávesu.
+            </div>
+            <div id="keybindGrid" class="bindGrid"></div>
+            <div id="bindInfo">Vyber klávesu, kterou chceš změnit.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pauseOverlay" class="panelOverlay hidden">
+    <div class="panelWindow" style="max-width:760px;">
+      <div class="panelHeader">
+        <div>
+          <h2>Pauza</h2>
+          <div class="sectionSub">Hra je zastavená. Hlad, žízeň, bleeding ani zvířata neběží.</div>
+        </div>
+      </div>
+
+      <div id="pauseActions">
+        <button id="resumeButton" class="mainButton" style="max-width:260px;">Pokračovat</button>
+        <button id="pauseInventoryButton" class="smallButton">Inventář</button>
+        <button id="pauseMapButton" class="smallButton">Mapa</button>
+        <button id="pauseSettingsButton" class="smallButton">Nastavení</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+
+  <script>
+    // =========================================================
+    // FARKEN'S WORLD - BETA 0.3.1
+    // Kompletní verze, ne patch.
+    // Hlavní fix: objekty, silnice, řeka a budovy sedí na terénu.
+    // =========================================================
+
+    let scene;
+    let camera;
+    let renderer;
+    let clock;
+    let raycaster;
+
+    let ambientLight;
+    let sunLight;
+    let torchLight;
+
+    let miniMapCtx;
+    let bigMapCtx;
+
+    let heldGroup;
+    let heldModels = {};
+
+    const WORLD_RADIUS = 420;
+    const PLAYER_RADIUS = 1.15;
+    const EYE_HEIGHT = 2.35;
+    const GRAVITY = 26;
+    const JUMP_POWER = 8.6;
+
+    const keys = {};
+    const materials = {};
+
+    const worldObjects = [];
+    const collisionObjects = [];
+    const interactables = [];
+    const rayTargets = [];
+    const mapMarkers = [];
+    const animatedObjects = [];
+    const animalItems = [];
+    const hazardZones = [];
+    const heatZones = [];
+    const roadPoints = [];
+    const riverPoints = [];
+    const roadLootPoints = [];
+
+    const densityPresets = {
+      low: {
+        grass: 120,
+        bushes: 36,
+        pebbles: 42,
+        trees: 60,
+        ore: 34,
+        animals: 8,
+        barrels: 16,
+        crates: 10,
+        clouds: 9
+      },
+      medium: {
+        grass: 220,
+        bushes: 56,
+        pebbles: 68,
+        trees: 96,
+        ore: 52,
+        animals: 12,
+        barrels: 24,
+        crates: 14,
+        clouds: 12
+      },
+      high: {
+        grass: 340,
+        bushes: 82,
+        pebbles: 95,
+        trees: 132,
+        ore: 66,
+        animals: 16,
+        barrels: 32,
+        crates: 18,
+        clouds: 15
+      }
+    };
+
+    const settings = {
+      performance: "medium",
+      renderScale: 1,
+      shaders: true,
+      fog: true,
+      shadows: true,
+      fps: true,
+      minimap: true,
+      compass: true,
+      help: true,
+      density: "medium",
+      fov: 80,
+      viewDistance: "medium"
+    };
+
+    const state = {
+      started: false,
+      paused: false,
+      inventoryOpen: false,
+      mapOpen: false,
+      settingsOpen: false,
+      buildOpen: false,
+      waitingForBind: null,
+      currentTarget: null,
+      waypoint: null,
+      mapZoom: 1,
+      dayTimer: 0,
+      temperature: 15,
+      bleeding: 0,
+      time: 0,
+      lastMiniMapDraw: 0
+    };
+
+    const player = {
+      x: 0,
+      y: EYE_HEIGHT,
+      z: 0,
+      airY: 0,
+      velocityY: 0,
+      grounded: true,
+      yaw: 0,
+      pitch: 0,
+      speed: 11.5,
+      selectedSlot: 0,
+      lastHit: 0,
+
+      health: 100,
+      hunger: 100,
+      thirst: 100,
+
+      wood: 0,
+      stone: 0,
+      metalOre: 0,
+      sulfurOre: 0,
+      cloth: 0,
+      scrap: 0,
+      lowGradeFuel: 0,
+      crudeOil: 0,
+      animalFat: 0,
+      mushrooms: 0,
+      waterBottle: 0,
+      bandage: 0,
+
+      unlockedTools: {
+        rock: true,
+        torch: true
+      }
+    };
+
+    const heldState = {
+      bob: 0,
+      swing: 0,
+      switch: 0
+    };
+
+    const keybinds = {
+      forward: "KeyW",
+      backward: "KeyS",
+      left: "KeyA",
+      right: "KeyD",
+      sprint: "ShiftLeft",
+      jump: "Space",
+      interact: "KeyE",
+      inventory: "Tab",
+      map: "KeyM",
+      settings: "KeyO",
+      buildMenu: "KeyB",
+      buildPlace: "KeyF",
+      buildRotate: "KeyR",
+      bandage: "KeyH"
+    };
+
+    const keybindLabels = {
+      forward: "Pohyb dopředu",
+      backward: "Pohyb dozadu",
+      left: "Pohyb doleva",
+      right: "Pohyb doprava",
+      sprint: "Sprint",
+      jump: "Skok",
+      interact: "Interakce / otevřít",
+      inventory: "Inventář",
+      map: "Mapa",
+      settings: "Nastavení",
+      buildMenu: "Build menu",
+      buildPlace: "Postavit díl",
+      buildRotate: "Otočit díl",
+      bandage: "Použít bandage"
+    };
+
+    const tools = [
+      {
+        id: "rock",
+        icon: "🪨",
+        name: "Kámen",
+        damage: 11,
+        gather: 0.75,
+        canOre: true,
+        canWood: true,
+        canAnimal: true,
+        best: "none"
+      },
+      {
+        id: "torch",
+        icon: "🔥",
+        name: "Louč",
+        damage: 7,
+        gather: 0.2,
+        canOre: false,
+        canWood: false,
+        canAnimal: true,
+        best: "none"
+      },
+      {
+        id: "stoneHatchet",
+        icon: "🪓",
+        name: "Stone sekera",
+        damage: 18,
+        gather: 1.2,
+        canOre: false,
+        canWood: true,
+        canAnimal: true,
+        best: "wood"
+      },
+      {
+        id: "stonePickaxe",
+        icon: "⛏️",
+        name: "Stone krumpáč",
+        damage: 18,
+        gather: 1.2,
+        canOre: true,
+        canWood: false,
+        canAnimal: true,
+        best: "ore"
+      },
+      {
+        id: "stoneSpear",
+        icon: "🔱",
+        name: "Stone oštěp",
+        damage: 24,
+        gather: 1,
+        canOre: false,
+        canWood: false,
+        canAnimal: true,
+        best: "animal"
+      }
+    ];
+
+    const recipes = [
+      {
+        id: "stoneHatchet",
+        icon: "🪓",
+        name: "Stone sekera",
+        description: "Lepší na těžbu stromů než obyčejný kámen.",
+        cost: { wood: 80, stone: 40 },
+        action: function () {
+          unlockTool("stoneHatchet");
+          showMessage("Vycraftil jsi Stone sekeru.");
+        }
+      },
+      {
+        id: "stonePickaxe",
+        icon: "⛏️",
+        name: "Stone krumpáč",
+        description: "Lepší na těžbu ore nodů.",
+        cost: { wood: 80, stone: 50 },
+        action: function () {
+          unlockTool("stonePickaxe");
+          showMessage("Vycraftil jsi Stone krumpáč.");
+        }
+      },
+      {
+        id: "stoneSpear",
+        icon: "🔱",
+        name: "Stone oštěp",
+        description: "Silnější zbraň proti zvířatům.",
+        cost: { wood: 120, stone: 35, cloth: 10 },
+        action: function () {
+          unlockTool("stoneSpear");
+          showMessage("Vycraftil jsi Stone oštěp.");
+        }
+      },
+      {
+        id: "bandage",
+        icon: "🩹",
+        name: "Bandage",
+        description: "Zastaví bleeding a trochu doplní HP.",
+        cost: { cloth: 5 },
+        action: function () {
+          player.bandage += 1;
+          showMessage("Vycraftil jsi Bandage.");
+        }
+      },
+      {
+        id: "waterBottle",
+        icon: "💧",
+        name: "Water bottle",
+        description: "Láhev s vodou pro doplnění žízně.",
+        cost: { scrap: 4 },
+        action: function () {
+          player.waterBottle += 1;
+          showMessage("Vycraftil jsi Water bottle.");
+        }
+      },
+      {
+        id: "lowGradeFuel",
+        icon: "🛢️",
+        name: "Low grade fuel",
+        description: "Palivo z animal fat a cloth.",
+        cost: { cloth: 5, animalFat: 10 },
+        action: function () {
+          player.lowGradeFuel += 10;
+          showMessage("Vycraftil jsi Low grade fuel.");
+        }
+      }
+    ];
+
+    const buildPieces = [
+      {
+        id: "foundation",
+        icon: "⬛",
+        name: "Foundation",
+        description: "Základ pro stavění.",
+        cost: { wood: 120 },
+        size: { x: 6, y: 0.35, z: 6 }
+      },
+      {
+        id: "wall",
+        icon: "🧱",
+        name: "Wall",
+        description: "Dřevěná stěna.",
+        cost: { wood: 90 },
+        size: { x: 6, y: 3.1, z: 0.35 }
+      },
+      {
+        id: "doorframe",
+        icon: "🚪",
+        name: "Door frame",
+        description: "Rám dveří bez kolize ve vstupu.",
+        cost: { wood: 95 },
+        size: { x: 6, y: 3.1, z: 0.35 }
+      },
+      {
+        id: "roof",
+        icon: "🔺",
+        name: "Roof / floor",
+        description: "Horní díl pro stavbu.",
+        cost: { wood: 100 },
+        size: { x: 6, y: 0.35, z: 6 }
+      }
+    ];
+
+    const buildState = {
+      selected: "foundation",
+      rotation: 0,
+      previewActive: false,
+      ghost: null
+    };
+
+    let currentFps = 0;
+    let fpsFrames = 0;
+    let fpsTimer = 0;
+
+    const ui = {};
+
+    function cacheUI() {
+      ui.menuOverlay = document.getElementById("menuOverlay");
+      ui.startGameButton = document.getElementById("startGameButton");
+
+      ui.gameHud = document.getElementById("gameHud");
+      ui.crosshair = document.getElementById("crosshair");
+      ui.hitMarker = document.getElementById("hitMarker");
+
+      ui.topCompassWrap = document.getElementById("topCompassWrap");
+      ui.compassTrack = document.getElementById("compassTrack");
+      ui.compassReadout = document.getElementById("compassReadout");
+      ui.waypointReadout = document.getElementById("waypointReadout");
+
+      ui.fpsCounter = document.getElementById("fpsCounter");
+      ui.miniMapPanel = document.getElementById("miniMapPanel");
+      ui.miniMapCanvas = document.getElementById("miniMapCanvas");
+
+      ui.targetPanel = document.getElementById("targetPanel");
+      ui.targetName = document.getElementById("targetName");
+      ui.targetText = document.getElementById("targetText");
+      ui.targetFill = document.getElementById("targetFill");
+
+      ui.resourceFeed = document.getElementById("resourceFeed");
+      ui.centerMessage = document.getElementById("centerMessage");
+
+      ui.hotbar = document.getElementById("hotbar");
+      ui.hotbarInfo = document.getElementById("hotbarInfo");
+
+      ui.hpFill = document.getElementById("hpFill");
+      ui.foodFill = document.getElementById("foodFill");
+      ui.waterFill = document.getElementById("waterFill");
+      ui.tempFill = document.getElementById("tempFill");
+      ui.bleedFill = document.getElementById("bleedFill");
+      ui.bandageFill = document.getElementById("bandageFill");
+
+      ui.hpText = document.getElementById("hpText");
+      ui.foodText = document.getElementById("foodText");
+      ui.waterText = document.getElementById("waterText");
+      ui.tempText = document.getElementById("tempText");
+      ui.bleedText = document.getElementById("bleedText");
+      ui.bandageText = document.getElementById("bandageText");
+      ui.statusText = document.getElementById("statusText");
+      ui.helpPanel = document.getElementById("helpPanel");
+
+      ui.inventoryOverlay = document.getElementById("inventoryOverlay");
+      ui.inventoryGrid = document.getElementById("inventoryGrid");
+      ui.craftingGrid = document.getElementById("craftingGrid");
+      ui.closeInventoryButton = document.getElementById("closeInventoryButton");
+
+      ui.buildOverlay = document.getElementById("buildOverlay");
+      ui.buildGrid = document.getElementById("buildGrid");
+      ui.closeBuildButton = document.getElementById("closeBuildButton");
+
+      ui.mapOverlay = document.getElementById("mapOverlay");
+      ui.bigMapCanvas = document.getElementById("bigMapCanvas");
+      ui.closeMapButton = document.getElementById("closeMapButton");
+      ui.zoomInMapButton = document.getElementById("zoomInMapButton");
+      ui.zoomOutMapButton = document.getElementById("zoomOutMapButton");
+      ui.clearWaypointButton = document.getElementById("clearWaypointButton");
+
+      ui.settingsOverlay = document.getElementById("settingsOverlay");
+      ui.closeSettingsButton = document.getElementById("closeSettingsButton");
+      ui.keybindGrid = document.getElementById("keybindGrid");
+      ui.bindInfo = document.getElementById("bindInfo");
+
+      ui.pauseOverlay = document.getElementById("pauseOverlay");
+      ui.resumeButton = document.getElementById("resumeButton");
+      ui.pauseInventoryButton = document.getElementById("pauseInventoryButton");
+      ui.pauseMapButton = document.getElementById("pauseMapButton");
+      ui.pauseSettingsButton = document.getElementById("pauseSettingsButton");
+    }
+
+        function setupButtons() {
+      ui.startGameButton.addEventListener("click", startGame);
+
+      ui.closeInventoryButton.addEventListener("click", toggleInventory);
+      ui.closeBuildButton.addEventListener("click", toggleBuildMenu);
+      ui.closeMapButton.addEventListener("click", toggleMap);
+      ui.closeSettingsButton.addEventListener("click", toggleSettings);
+
+      ui.resumeButton.addEventListener("click", resumeGame);
+
+      ui.pauseInventoryButton.addEventListener("click", function () {
+        closePause();
+        toggleInventory(true);
+      });
+
+      ui.pauseMapButton.addEventListener("click", function () {
+        closePause();
+        toggleMap(true);
+      });
+
+      ui.pauseSettingsButton.addEventListener("click", function () {
+        closePause();
+        toggleSettings(true);
+      });
+
+      ui.zoomInMapButton.addEventListener("click", function () {
+        state.mapZoom = clamp(state.mapZoom * 1.2, 0.7, 4);
+        drawBigMap();
+      });
+
+      ui.zoomOutMapButton.addEventListener("click", function () {
+        state.mapZoom = clamp(state.mapZoom / 1.2, 0.7, 4);
+        drawBigMap();
+      });
+
+      ui.clearWaypointButton.addEventListener("click", function () {
+        state.waypoint = null;
+        showMessage("Waypoint smazán.");
+        drawBigMap();
+      });
+
+      ui.bigMapCanvas.addEventListener("click", function (event) {
+        if (!state.mapOpen) return;
+
+        state.waypoint = mapMouseToWorld(event);
+        showMessage("Waypoint nastaven. Ukáže se na mapě i na kompasu.");
+        drawBigMap();
+      });
+
+      ui.bigMapCanvas.addEventListener("contextmenu", function (event) {
+        event.preventDefault();
+
+        state.waypoint = null;
+        showMessage("Waypoint smazán.");
+        drawBigMap();
+      });
+
+      ui.bigMapCanvas.addEventListener("wheel", function (event) {
+        event.preventDefault();
+
+        if (event.deltaY < 0) {
+          state.mapZoom = clamp(state.mapZoom * 1.14, 0.7, 4);
+        } else {
+          state.mapZoom = clamp(state.mapZoom / 1.14, 0.7, 4);
+        }
+
+        drawBigMap();
+      });
+
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
+      document.addEventListener("mousemove", onMouseMove);
+
+      document.addEventListener("mousedown", function (event) {
+        if (
+          event.button === 0 &&
+          state.started &&
+          !state.paused &&
+          !state.inventoryOpen &&
+          !state.mapOpen &&
+          !state.settingsOpen &&
+          !state.buildOpen &&
+          document.pointerLockElement === document.body
+        ) {
+          hitTarget();
+        }
+      });
+
+      document.addEventListener("contextmenu", function (event) {
+        event.preventDefault();
+      });
+
+      document.addEventListener("pointerlockchange", function () {
+        if (!state.started) return;
+
+        const locked = document.pointerLockElement === document.body;
+
+        if (
+          !locked &&
+          !state.inventoryOpen &&
+          !state.mapOpen &&
+          !state.settingsOpen &&
+          !state.buildOpen
+        ) {
+          state.paused = true;
+          ui.pauseOverlay.classList.remove("hidden");
+        }
+      });
+
+      window.addEventListener("resize", onResize);
+
+      bindMenuSettingButtons();
+    }
+
+    function bindMenuSettingButtons() {
+      document.getElementById("menuPerfLow").addEventListener("click", function () {
+        setPerformance("low");
+      });
+
+      document.getElementById("menuPerfMedium").addEventListener("click", function () {
+        setPerformance("medium");
+      });
+
+      document.getElementById("menuPerfHigh").addEventListener("click", function () {
+        setPerformance("high");
+      });
+
+      document.getElementById("menuShadows").addEventListener("click", function () {
+        toggleSetting("shadows");
+      });
+
+      document.getElementById("menuFog").addEventListener("click", function () {
+        toggleSetting("fog");
+      });
+
+      document.getElementById("menuShaders").addEventListener("click", function () {
+        toggleSetting("shaders");
+      });
+
+      document.getElementById("menuScale075").addEventListener("click", function () {
+        setRenderScale(0.75);
+      });
+
+      document.getElementById("menuScale1").addEventListener("click", function () {
+        setRenderScale(1);
+      });
+
+      document.getElementById("menuScale125").addEventListener("click", function () {
+        setRenderScale(1.25);
+      });
+
+      document.getElementById("menuCompass").addEventListener("click", function () {
+        toggleSetting("compass");
+      });
+
+      document.getElementById("menuMinimap").addEventListener("click", function () {
+        toggleSetting("minimap");
+      });
+
+      document.getElementById("menuFps").addEventListener("click", function () {
+        toggleSetting("fps");
+      });
+
+      document.getElementById("menuHelp").addEventListener("click", function () {
+        toggleSetting("help");
+      });
+    }
+
+    function startGame() {
+      ui.menuOverlay.classList.add("hidden");
+      ui.gameHud.classList.remove("hidden");
+
+      if (!state.started) {
+        initGame();
+      }
+
+      state.started = true;
+      resumeGame();
+    }
+
+    function resumeGame() {
+      state.paused = false;
+      ui.pauseOverlay.classList.add("hidden");
+
+      if (
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen &&
+        !state.buildOpen
+      ) {
+        document.body.requestPointerLock();
+      }
+    }
+
+    function closePause() {
+      state.paused = false;
+      ui.pauseOverlay.classList.add("hidden");
+    }
+
+    function initGame() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x8fbce8);
+      scene.fog = new THREE.Fog(0x8fbce8, 130, 720);
+
+      camera = new THREE.PerspectiveCamera(
+        settings.fov,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1200
+      );
+
+      scene.add(camera);
+
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: "high-performance"
+      });
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(getRenderPixelRatio());
+      renderer.shadowMap.enabled = settings.shadows;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.08;
+
+      document.body.appendChild(renderer.domElement);
+
+      clock = new THREE.Clock();
+      raycaster = new THREE.Raycaster();
+
+      miniMapCtx = ui.miniMapCanvas.getContext("2d");
+      bigMapCtx = ui.bigMapCanvas.getContext("2d");
+
+      createCompassMarks();
+      createMaterials();
+      createLights();
+      createHeldTools();
+      createBuildGhost();
+      createWorld();
+
+      renderHotbar();
+      renderInventory();
+      renderCrafting();
+      renderBuildMenu();
+      renderSettings();
+      applySettings();
+
+      showMessage("Beta 0.3.1 spuštěna. Fix terénu, řeky, silnice a levitujících objektů.");
+
+      animate();
+    }
+
+    function createCompassMarks() {
+      ui.compassTrack.innerHTML = "";
+
+      const marks = [];
+
+      for (let deg = 0; deg <= 720; deg += 10) {
+        const realDeg = deg % 360;
+        let label = "";
+
+        if (realDeg === 0) label = "N";
+        else if (realDeg === 45) label = "NE";
+        else if (realDeg === 90) label = "E";
+        else if (realDeg === 135) label = "SE";
+        else if (realDeg === 180) label = "S";
+        else if (realDeg === 225) label = "SW";
+        else if (realDeg === 270) label = "W";
+        else if (realDeg === 315) label = "NW";
+        else if (realDeg % 30 === 0) label = String(realDeg);
+
+        marks.push({
+          deg: realDeg,
+          label: label,
+          big: label === "N" || label === "E" || label === "S" || label === "W" || label.length === 2
+        });
+      }
+
+      marks.forEach(function (mark) {
+        const div = document.createElement("div");
+        div.className = "compassMark" + (mark.big ? " big" : "");
+        div.dataset.deg = mark.deg;
+        div.innerHTML =
+          "<span>" +
+          mark.label +
+          "</span><div class='compassTickLine'></div>";
+
+        ui.compassTrack.appendChild(div);
+      });
+    }
+
+    function getRenderPixelRatio() {
+      return Math.min(window.devicePixelRatio * settings.renderScale, 1.6);
+    }
+
+    function unlockTool(toolId) {
+      player.unlockedTools[toolId] = true;
+      renderHotbar();
+    }
+
+    function isToolUnlocked(toolId) {
+      return !!player.unlockedTools[toolId];
+    }
+
+    function createMaterials() {
+      materials.grass = makeCanvasMaterial("#5e8f46", "#355f2a", "grass", 6);
+      materials.grassDark = makeCanvasMaterial("#426f37", "#244422", "grass", 6);
+      materials.dirt = makeCanvasMaterial("#6a5a3a", "#3c321f", "dirt", 4);
+      materials.road = makeCanvasMaterial("#49473d", "#27251f", "road", 4);
+      materials.sand = makeCanvasMaterial("#bfae76", "#8c7b4b", "sand", 4);
+
+      materials.wood = makeCanvasMaterial("#8a5a2b", "#4a2a12", "wood", 3);
+      materials.woodDark = makeCanvasMaterial("#5a3419", "#2b1609", "wood", 3);
+
+      materials.stone = makeCanvasMaterial("#7b8490", "#4b5563", "stone", 3);
+      materials.stoneDark = makeCanvasMaterial("#454b55", "#1f2937", "stone", 3);
+      materials.metal = makeCanvasMaterial("#64748b", "#263244", "metal", 3);
+
+      materials.metalOre = makeCanvasMaterial("#8a552a", "#3d2916", "ore", 3);
+      materials.sulfurOre = makeCanvasMaterial("#b8942e", "#5f4311", "ore", 3);
+
+      materials.leaf = makeCanvasMaterial("#176534", "#0b3c1e", "leaf", 3);
+      materials.bush = makeCanvasMaterial("#1f7a38", "#0b3d1d", "leaf", 3);
+
+      materials.cloth = makeCanvasMaterial("#22c55e", "#14532d", "leaf", 2);
+      materials.crate = makeCanvasMaterial("#9a6b35", "#4b2d13", "wood", 2);
+      materials.rareCrate = makeCanvasMaterial("#1d4ed8", "#0e2f8a", "metal", 2);
+
+      materials.animalBrown = makeCanvasMaterial("#8b7355", "#4b3825", "animal", 2);
+      materials.animalDark = makeCanvasMaterial("#4b3825", "#1f160d", "animal", 2);
+      materials.wolf = makeCanvasMaterial("#7a7f86", "#32363b", "animal", 2);
+      materials.bear = makeCanvasMaterial("#3b2a1a", "#171008", "animal", 2);
+
+      materials.water = new THREE.MeshStandardMaterial({
+        color: 0x2f9dff,
+        roughness: 0.32,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.72
+      });
+
+      materials.ghostGood = new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        transparent: true,
+        opacity: 0.32,
+        roughness: 0.8
+      });
+
+      materials.ghostBad = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        transparent: true,
+        opacity: 0.32,
+        roughness: 0.8
+      });
+    }
+
+    function makeCanvasMaterial(baseColor, lineColor, type, repeat) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(0, 0, 256, 256);
+
+  function dot(x, y, size, color, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (type === "grass") {
+    // základní tmavší fleky
+    for (let i = 0; i < 1400; i++) {
+      dot(
+        random(0, 256),
+        random(0, 256),
+        random(0.8, 2.2),
+        Math.random() > 0.5 ? lineColor : "rgba(255,255,180,0.08)",
+        random(0.12, 0.38)
+      );
+    }
+
+    // jemné tahy trávy
+    for (let i = 0; i < 1100; i++) {
+      const x = random(0, 256);
+      const y = random(0, 256);
+      const len = random(4, 10);
+
+      ctx.strokeStyle = Math.random() > 0.65 ? lineColor : "rgba(255,255,255,0.05)";
+      ctx.lineWidth = random(0.6, 1.4);
+      ctx.globalAlpha = random(0.15, 0.45);
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(
+        x + random(-2, 2),
+        y - len * 0.5,
+        x + random(-4, 4),
+        y - len
+      );
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // barevná rozmanitost
+    for (let i = 0; i < 160; i++) {
+      ctx.fillStyle = Math.random() > 0.5
+        ? "rgba(80,120,45,0.12)"
+        : "rgba(130,155,70,0.08)";
+      ctx.beginPath();
+      ctx.ellipse(
+        random(0, 256),
+        random(0, 256),
+        random(8, 24),
+        random(8, 24),
+        random(0, Math.PI),
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+  }
+
+  if (type === "dirt") {
+    for (let i = 0; i < 1200; i++) {
+      dot(
+        random(0, 256),
+        random(0, 256),
+        random(0.8, 2.2),
+        Math.random() > 0.5 ? lineColor : "rgba(255,255,255,0.05)",
+        random(0.12, 0.32)
+      );
+    }
+
+    for (let i = 0; i < 180; i++) {
+      ctx.strokeStyle = "rgba(40,30,18,0.18)";
+      ctx.lineWidth = random(1, 2.2);
+      ctx.beginPath();
+      ctx.moveTo(random(0, 256), random(0, 256));
+      ctx.lineTo(random(0, 256), random(0, 256));
+      ctx.stroke();
+    }
+  }
+
+  if (type === "road") {
+    for (let i = 0; i < 1800; i++) {
+      dot(
+        random(0, 256),
+        random(0, 256),
+        random(0.7, 2.4),
+        Math.random() > 0.55 ? lineColor : "rgba(255,255,255,0.06)",
+        random(0.12, 0.34)
+      );
+    }
+
+    // světlejší kamínky
+    for (let i = 0; i < 220; i++) {
+      dot(
+        random(0, 256),
+        random(0, 256),
+        random(1.2, 3.2),
+        "rgba(180,180,180,0.10)",
+        random(0.08, 0.18)
+      );
+    }
+  }
+
+  if (type === "sand") {
+    for (let i = 0; i < 2200; i++) {
+      dot(
+        random(0, 256),
+        random(0, 256),
+        random(0.5, 1.8),
+        Math.random() > 0.5 ? lineColor : "rgba(255,255,255,0.10)",
+        random(0.14, 0.34)
+      );
+    }
+  }
+
+  if (type === "wood") {
+    for (let y = 0; y < 256; y += 14) {
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = random(1.2, 2.4);
+      ctx.beginPath();
+      ctx.moveTo(0, y + random(-3, 3));
+      ctx.bezierCurveTo(
+        70, y + random(-8, 8),
+        170, y + random(-8, 8),
+        256, y + random(-3, 3)
+      );
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  if (type === "stone" || type === "ore" || type === "metal") {
+    for (let i = 0; i < 300; i++) {
+      ctx.strokeStyle = Math.random() > 0.5 ? lineColor : "rgba(255,255,255,0.08)";
+      ctx.globalAlpha = random(0.18, 0.55);
+      ctx.lineWidth = random(1, 2);
+      ctx.beginPath();
+      ctx.moveTo(random(0, 256), random(0, 256));
+      ctx.lineTo(random(0, 256), random(0, 256));
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  if (type === "leaf" || type === "animal") {
+    for (let i = 0; i < 320; i++) {
+      ctx.fillStyle = Math.random() > 0.55 ? lineColor : "rgba(255,255,255,0.06)";
+      ctx.beginPath();
+      ctx.ellipse(
+        random(0, 256),
+        random(0, 256),
+        random(2, 8),
+        random(1, 5),
+        random(0, Math.PI),
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(repeat, repeat);
+  texture.generateMipmaps = true;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
+  return new THREE.MeshStandardMaterial({
+    map: texture,
+    roughness: type === "road" ? 1 : 0.92,
+    metalness: type === "metal" ? 0.25 : 0.02
+  });
+}
+
+    function createLights() {
+      ambientLight = new THREE.HemisphereLight(0xe7f4ff, 0x314d25, 0.84);
+      scene.add(ambientLight);
+
+      sunLight = new THREE.DirectionalLight(0xfff2c9, 2.15);
+      sunLight.position.set(150, 180, 110);
+      sunLight.castShadow = settings.shadows;
+      sunLight.shadow.mapSize.width = 1024;
+      sunLight.shadow.mapSize.height = 1024;
+      sunLight.shadow.camera.near = 1;
+      sunLight.shadow.camera.far = 820;
+      sunLight.shadow.camera.left = -330;
+      sunLight.shadow.camera.right = 330;
+      sunLight.shadow.camera.top = 330;
+      sunLight.shadow.camera.bottom = -330;
+      scene.add(sunLight);
+
+      torchLight = new THREE.PointLight(0xff8a2a, 0, 18, 2);
+      torchLight.position.set(0.28, 0.18, -0.2);
+      camera.add(torchLight);
+    }
+
+    function createWorld() {
+  const density = densityPresets[settings.density];
+
+  createTerrainMesh();
+  createWater();
+
+  // Důležité pořadí: nejdřív řeka a silnice, potom objekty.
+  createRiver();
+  createRoad();
+
+  createRoadsideLoot(density.barrels, density.crates);
+
+  createGrass(density.grass);
+  createBushes(density.bushes);
+  createPebbles(density.pebbles);
+  createTrees(density.trees);
+  createOreNodes(density.ore);
+  createHemp(28);
+  createMushrooms(18);
+
+  createEnterableWarehouse(120, -75, 0);
+  createEnterableCabin(-145, 95, Math.PI / 2);
+  createEnterableGarage(205, 100, -0.2);
+  createGasStation(-110, -180, 0.2);
+  createOutpost(-230, -110, 0.35);
+  createJunkyard(70, 190, -0.2);
+  createWatchTower(165, -190);
+  createCampfire(7, 9);
+
+  createAnimals(density.animals);
+  createClouds(density.clouds);
+}
+
+function createRoadsideLoot(barrelCount, crateCount) {
+  for (let i = 0; i < barrelCount; i++) {
+    const p = randomRoadsidePoint();
+    const type = randomChoice(["yellow", "yellow", "yellow", "blue", "red"]);
+
+    createBarrel(p.x, p.z, type);
+  }
+
+  for (let i = 0; i < crateCount; i++) {
+    const p = randomRoadsidePoint();
+    const rarity = Math.random() < 0.24 ? "rare" : "normal";
+
+    createLootCrate(p.x, p.z, rarity);
+  }
+}
+
+    function createRoad() {
+  roadPoints.length = 0;
+  roadLootPoints.length = 0;
+
+  const raw = [
+    [-330, -210],
+    [-280, -185],
+    [-220, -160],
+    [-165, -155],
+    [-105, -132],
+    [-42, -95],
+    [24, -56],
+    [86, -14],
+    [142, 34],
+    [195, 88],
+    [242, 140],
+    [305, 205]
+  ];
+
+  const smooth = buildSmoothTerrainPath(raw, 140);
+
+  smooth.forEach(function (p) {
+    roadPoints.push({
+      x: p.x,
+      z: p.z
+    });
+  });
+
+  const roadBase = createRibbonFromPoints(
+    smooth,
+    18,
+    new THREE.MeshStandardMaterial({
+      color: 0x5b513d,
+      roughness: 1
+    }),
+    0.018
+  );
+  scene.add(trackObject(roadBase));
+
+  const roadTop = createRibbonFromPoints(
+    smooth,
+    10,
+    materials.road,
+    0.028
+  );
+  scene.add(trackObject(roadTop));
+
+  // Body pro loot vedle silnice, ale ne primo na silnici.
+  for (let i = 0; i < smooth.length; i += 8) {
+    roadLootPoints.push({
+      x: smooth[i].x,
+      z: smooth[i].z
+    });
+  }
+
+  mapMarkers.push({
+    x: 20,
+    z: -50,
+    kind: "road",
+    label: "Road"
+  });
+}
+    function createTerrainMesh() {
+  // OPRAVA BETA 0.3.2:
+  // Terén už není PlaneGeometry otočená přes rotation.x.
+  // Teď se země staví přímo v souřadnicích X, Y, Z.
+  // Díky tomu viditelný terén přesně odpovídá tomu, po čem chodí hráč.
+
+  const segments = 180;
+  const size = WORLD_RADIUS * 2;
+  const step = size / segments;
+
+  const vertices = [];
+  const uvs = [];
+  const indices = [];
+
+  for (let zIndex = 0; zIndex <= segments; zIndex++) {
+    for (let xIndex = 0; xIndex <= segments; xIndex++) {
+      const x = -WORLD_RADIUS + xIndex * step;
+      const z = -WORLD_RADIUS + zIndex * step;
+      const y = terrainHeight(x, z);
+
+      vertices.push(x, y, z);
+      uvs.push(xIndex / segments, zIndex / segments);
+    }
+  }
+
+  for (let zIndex = 0; zIndex < segments; zIndex++) {
+    for (let xIndex = 0; xIndex < segments; xIndex++) {
+      const a = zIndex * (segments + 1) + xIndex;
+      const b = a + 1;
+      const c = a + (segments + 1);
+      const d = c + 1;
+
+      indices.push(a, c, b);
+      indices.push(b, c, d);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  const ground = new THREE.Mesh(geometry, materials.grass);
+  ground.receiveShadow = true;
+  scene.add(trackObject(ground));
+
+  // Pláž okolo ostrova – taky bez špatné rotace vůči terénu.
+  const beachGeometry = new THREE.RingGeometry(WORLD_RADIUS - 36, WORLD_RADIUS + 8, 192);
+  const beach = new THREE.Mesh(beachGeometry, materials.sand);
+
+  beach.rotation.x = -Math.PI / 2;
+  beach.position.y = -0.18;
+  beach.receiveShadow = true;
+  scene.add(trackObject(beach));
+}
+
+    function createWater() {
+      const ocean = new THREE.Mesh(
+        new THREE.RingGeometry(WORLD_RADIUS + 2, 760, 192),
+        new THREE.MeshStandardMaterial({
+          color: 0x2f74d0,
+          roughness: 0.35,
+          metalness: 0.08,
+          transparent: true,
+          opacity: 0.82
+        })
+      );
+
+      ocean.rotation.x = -Math.PI / 2;
+      ocean.position.y = -0.55;
+      scene.add(trackObject(ocean));
+
+      animatedObjects.push({
+        type: "water",
+        object: ocean
+      });
+    }
+     function buildSmoothTerrainPath(rawPoints, samples) {
+  const curve = new THREE.CatmullRomCurve3(
+    rawPoints.map(function (p) {
+      return new THREE.Vector3(p[0], 0, p[1]);
+    }),
+    false,
+    "centripetal"
+  );
+
+  const result = [];
+
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const point = curve.getPoint(t);
+
+    result.push({
+      x: point.x,
+      z: point.z
+    });
+  }
+
+  return result;
+}
+
+       function createRiver() {
+  riverPoints.length = 0;
+
+  const raw = [
+    [-60, -340],
+    [-38, -270],
+    [-12, -205],
+    [10, -145],
+    [24, -80],
+    [18, -18],
+    [0, 42],
+    [-12, 102],
+    [-6, 160],
+    [20, 220],
+    [52, 290],
+    [68, 350]
+  ];
+
+  const smooth = buildSmoothTerrainPath(raw, 140);
+
+  smooth.forEach(function (p) {
+    riverPoints.push({
+      x: p.x,
+      z: p.z
+    });
+  });
+
+  const riverMud = createRibbonFromPoints(
+    smooth,
+    28,
+    new THREE.MeshStandardMaterial({
+      color: 0x6b5a3b,
+      roughness: 1
+    }),
+    0.016
+  );
+  scene.add(trackObject(riverMud));
+
+  const riverSand = createRibbonFromPoints(
+    smooth,
+    22,
+    materials.sand,
+    0.024
+  );
+  scene.add(trackObject(riverSand));
+
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x1d9bf0,
+    emissive: 0x0b4f7a,
+    emissiveIntensity: 0.12,
+    roughness: 0.22,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.86,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+
+  const water = createRibbonFromPoints(
+    smooth,
+    15,
+    waterMat,
+    0.075
+  );
+
+  scene.add(trackObject(water));
+
+  animatedObjects.push({
+    type: "water",
+    object: water
+  });
+
+  mapMarkers.push({
+    x: 5,
+    z: 30,
+    kind: "water",
+    label: "River"
+  });
+}
+
+
+    function createRibbonFromPoints(points, width, material, yOffset) {
+  const left = [];
+  const right = [];
+
+  for (let i = 0; i < points.length; i++) {
+    const prev = points[Math.max(0, i - 1)];
+    const next = points[Math.min(points.length - 1, i + 1)];
+
+    const dx = next.x - prev.x;
+    const dz = next.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+
+    const nx = -dz / len;
+    const nz = dx / len;
+
+    const lx = points[i].x + nx * width / 2;
+    const lz = points[i].z + nz * width / 2;
+
+    const rx = points[i].x - nx * width / 2;
+    const rz = points[i].z - nz * width / 2;
+
+    // DULEZITE:
+    // Y se pocita primo z terrainHeight pro kazdy okraj zvlast.
+    // Diky tomu silnice ani reka nebudou levitovat.
+    left.push({
+      x: lx,
+      y: terrainHeight(lx, lz) + yOffset,
+      z: lz
+    });
+
+    right.push({
+      x: rx,
+      y: terrainHeight(rx, rz) + yOffset,
+      z: rz
+    });
+  }
+
+  const vertices = [];
+  const uvs = [];
+  const indices = [];
+
+  for (let i = 0; i < points.length; i++) {
+    vertices.push(left[i].x, left[i].y, left[i].z);
+    vertices.push(right[i].x, right[i].y, right[i].z);
+
+    uvs.push(0, i / points.length);
+    uvs.push(1, i / points.length);
+  }
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = i * 2;
+    const b = a + 1;
+    const c = a + 2;
+    const d = a + 3;
+
+    indices.push(a, c, b);
+    indices.push(b, c, d);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  material.side = THREE.DoubleSide;
+  material.depthWrite = false;
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.receiveShadow = true;
+
+  return mesh;
+}
+    function randomRoadsidePoint() {
+  let tries = 0;
+
+  while (tries < 80) {
+    tries++;
+
+    const base = randomChoice(roadLootPoints);
+    const angle = random(0, Math.PI * 2);
+    const distance = random(20, 34);
+
+    let x = base.x + Math.cos(angle) * distance;
+    let z = base.z + Math.sin(angle) * distance;
+
+    const dist = Math.hypot(x, z);
+
+    if (dist > WORLD_RADIUS - 35) {
+      x *= (WORLD_RADIUS - 35) / dist;
+      z *= (WORLD_RADIUS - 35) / dist;
+    }
+
+    // Nesmí být přímo na silnici, v řece nebo na prudkém kopci.
+    if (!isNearRoadOrWater(x, z) && isSafeSpawn(x, z)) {
+      return { x: x, z: z };
+    }
+  }
+
+  return randomIslandPoint();
+}
+
+    function randomRoadsidePoint() {
+      const base = randomChoice(roadLootPoints);
+      const angle = random(0, Math.PI * 2);
+      const distance = random(9, 25);
+
+      let x = base.x + Math.cos(angle) * distance;
+      let z = base.z + Math.sin(angle) * distance;
+
+      const dist = Math.hypot(x, z);
+
+      if (dist > WORLD_RADIUS - 30) {
+        x *= (WORLD_RADIUS - 30) / dist;
+        z *= (WORLD_RADIUS - 30) / dist;
+      }
+
+      return { x: x, z: z };
+    }
+
+    function createGrass(count) {
+  const materialsGrass = [
+    new THREE.MeshStandardMaterial({
+      color: 0x4f8b38,
+      roughness: 1,
+      side: THREE.DoubleSide
+    }),
+    new THREE.MeshStandardMaterial({
+      color: 0x5d9a42,
+      roughness: 1,
+      side: THREE.DoubleSide
+    }),
+    new THREE.MeshStandardMaterial({
+      color: 0x6ea74e,
+      roughness: 1,
+      side: THREE.DoubleSide
+    })
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const p = randomIslandPoint();
+
+    if (isNearRoadOrWater(p.x, p.z)) continue;
+    if (!isSafeSpawn(p.x, p.z)) continue;
+
+    const tuft = new THREE.Group();
+    const bladeCount = settings.performance === "low" ? 4 : 8;
+
+    for (let j = 0; j < bladeCount; j++) {
+      const h = random(0.35, 0.95);
+      const w = random(0.06, 0.11);
+      const mat = randomChoice(materialsGrass);
+
+      const bladeA = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      bladeA.position.set(random(-0.28, 0.28), h / 2, random(-0.28, 0.28));
+      bladeA.rotation.y = random(0, Math.PI * 2);
+      bladeA.rotation.z = random(-0.18, 0.18);
+      tuft.add(bladeA);
+
+      const bladeB = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      bladeB.position.copy(bladeA.position);
+      bladeB.rotation.y = bladeA.rotation.y + Math.PI / 2;
+      bladeB.rotation.z = bladeA.rotation.z;
+      tuft.add(bladeB);
+    }
+
+    placeOnGround(tuft, p.x, p.z, 0.02);
+    scene.add(trackObject(tuft));
+  }
+}
+
+    function createBushes(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+
+        if (isNearRoadOrWater(p.x, p.z)) continue;
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        const bush = new THREE.Group();
+
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(random(0.75, 1.5), 12, 8),
+          materials.bush
+        );
+
+        mesh.scale.set(1.15, 0.65, 1.05);
+        mesh.position.y = 0.66;
+        mesh.castShadow = settings.shadows;
+
+        bush.add(mesh);
+
+        placeOnGround(bush, p.x, p.z, 0);
+        scene.add(trackObject(bush));
+
+        addCollisionCircle(p.x, p.z, 1.05, "bush");
+      }
+    }
+
+    function createPebbles(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+
+        if (isNearRoadOrWater(p.x, p.z)) continue;
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        const group = new THREE.Group();
+
+        for (let j = 0; j < 3; j++) {
+          const size = random(0.13, 0.34);
+
+          const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(size, 0),
+            materials.stone
+          );
+
+          rock.position.set(random(-1, 1), size * 0.55, random(-1, 1));
+          rock.scale.y = random(0.4, 0.8);
+          rock.castShadow = settings.shadows;
+
+          group.add(rock);
+        }
+
+        placeOnGround(group, p.x, p.z, 0);
+        scene.add(trackObject(group));
+      }
+    }
+
+    function createTrees(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+
+        if (isNearRoadOrWater(p.x, p.z)) continue;
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        createTree(p.x, p.z);
+      }
+    }
+
+    function createTree(x, z) {
+      const group = new THREE.Group();
+
+      const trunkHeight = random(4.8, 7.2);
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.45, trunkHeight, 9),
+        materials.wood
+      );
+
+      trunk.position.y = trunkHeight / 2;
+      trunk.castShadow = settings.shadows;
+      group.add(trunk);
+
+      const crown1 = new THREE.Mesh(
+        new THREE.ConeGeometry(2.05, 3.8, 11),
+        materials.leaf
+      );
+
+      crown1.position.y = trunkHeight + 1.05;
+      crown1.castShadow = settings.shadows;
+      group.add(crown1);
+
+      const crown2 = new THREE.Mesh(
+        new THREE.ConeGeometry(1.55, 2.7, 11),
+        materials.leaf
+      );
+
+      crown2.position.y = trunkHeight + 2.65;
+      crown2.castShadow = settings.shadows;
+      group.add(crown2);
+
+      placeOnGround(group, x, z, 0);
+      group.rotation.y = random(0, Math.PI * 2);
+
+      scene.add(trackObject(group));
+
+      addCollisionCircle(x, z, 0.95, "tree");
+
+      registerInteractable({
+        object: group,
+        type: "wood",
+        label: "Strom",
+        hp: 100,
+        maxHp: 100,
+        reward: {
+          wood: randomInt(42, 72)
+        },
+        collision: {
+          x: x,
+          z: z,
+          r: 0.95
+        }
+      });
+    }
+
+    function createOreNodes(count) {
+      for (let i = 0; i < count; i++) {
+        const type = randomChoice(["stone", "stone", "stone", "metalOre", "sulfurOre"]);
+        const p = randomIslandPoint();
+
+        if (isNearRoadOrWater(p.x, p.z)) continue;
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        createOreNode(p.x, p.z, type);
+      }
+    }
+
+    function createOreNode(x, z, type) {
+      const config = {
+        stone: {
+          label: "Stone ore",
+          material: materials.stone,
+          vein: 0xd9dfe7,
+          hp: 120,
+          reward: { stone: randomInt(38, 65) }
+        },
+        metalOre: {
+          label: "Metal ore",
+          material: materials.metalOre,
+          vein: 0xff9952,
+          hp: 145,
+          reward: { metalOre: randomInt(24, 44) }
+        },
+        sulfurOre: {
+          label: "Sulfur ore",
+          material: materials.sulfurOre,
+          vein: 0xffea70,
+          hp: 135,
+          reward: { sulfurOre: randomInt(20, 38) }
+        }
+      }[type];
+
+      const group = new THREE.Group();
+
+      for (let i = 0; i < 4; i++) {
+        const size = random(0.65, 1.35);
+
+        const part = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(size, 0),
+          config.material
+        );
+
+        part.position.set(
+          random(-0.7, 0.7),
+          size * 0.55 + random(0.02, 0.12),
+          random(-0.7, 0.7)
+        );
+
+        part.scale.set(
+          random(0.8, 1.25),
+          random(0.7, 1.15),
+          random(0.8, 1.25)
+        );
+
+        part.rotation.set(random(0, 3), random(0, 6), random(0, 3));
+        part.castShadow = settings.shadows;
+        part.receiveShadow = true;
+
+        group.add(part);
+      }
+
+      const veinMaterial = new THREE.MeshStandardMaterial({
+        color: config.vein,
+        emissive: config.vein,
+        emissiveIntensity: type === "stone" ? 0.02 : 0.08,
+        roughness: 0.45,
+        metalness: 0.18
+      });
+
+      for (let i = 0; i < 3; i++) {
+        const vein = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            random(0.08, 0.14),
+            random(0.55, 0.95),
+            random(0.08, 0.14)
+          ),
+          veinMaterial
+        );
+
+        vein.position.set(random(-0.65, 0.65), random(0.55, 1.45), random(-0.65, 0.65));
+        vein.rotation.set(random(0, 2), random(0, 6), random(0, 2));
+
+        group.add(vein);
+      }
+
+      placeOnGround(group, x, z, 0);
+      group.rotation.y = random(0, Math.PI * 2);
+
+      scene.add(trackObject(group));
+
+      addCollisionCircle(x, z, 1.55, "ore");
+
+      registerInteractable({
+        object: group,
+        type: type,
+        label: config.label,
+        hp: config.hp,
+        maxHp: config.hp,
+        reward: config.reward,
+        collision: {
+          x: x,
+          z: z,
+          r: 1.55
+        }
+      });
+    }
+
+    function createHemp(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+
+        if (isNearRoadOrWater(p.x, p.z)) continue;
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        const hemp = new THREE.Group();
+
+        for (let j = 0; j < 8; j++) {
+          const leaf = new THREE.Mesh(
+            new THREE.ConeGeometry(0.11, 1.15, 6),
+            materials.cloth
+          );
+
+          leaf.position.set(random(-0.42, 0.42), 0.58, random(-0.42, 0.42));
+          leaf.rotation.z = random(-0.35, 0.35);
+
+          hemp.add(leaf);
+        }
+
+        placeOnGround(hemp, p.x, p.z, 0);
+        scene.add(trackObject(hemp));
+
+        registerInteractable({
+          object: hemp,
+          type: "cloth",
+          label: "Rostlina",
+          hp: 35,
+          maxHp: 35,
+          reward: {
+            cloth: randomInt(6, 13)
+          }
+        });
+      }
+    }
+
+    function createMushrooms(count) {
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        const mushroom = new THREE.Group();
+
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.09, 0.14, 0.55, 8),
+          new THREE.MeshStandardMaterial({
+            color: 0xf5deb3,
+            roughness: 0.9
+          })
+        );
+
+        stem.position.y = 0.27;
+        mushroom.add(stem);
+
+        const cap = new THREE.Mesh(
+          new THREE.SphereGeometry(0.32, 12, 8),
+          new THREE.MeshStandardMaterial({
+            color: 0xdc2626,
+            roughness: 0.86
+          })
+        );
+
+        cap.position.y = 0.58;
+        cap.scale.y = 0.45;
+        mushroom.add(cap);
+
+        placeOnGround(mushroom, p.x, p.z, 0);
+        scene.add(trackObject(mushroom));
+
+        registerInteractable({
+          object: mushroom,
+          type: "food",
+          label: "Houba",
+          hp: 15,
+          maxHp: 15,
+          reward: {
+            mushrooms: 1,
+            hunger: 9
+          }
+        });
+      }
+    }
+
+    function createBarrel(x, z, type) {
+      const config = {
+        yellow: {
+          label: "Žlutý scrap barrel",
+          color: 0xd6a322,
+          reward: {
+            scrap: randomInt(5, 13),
+            metalOre: randomInt(2, 8)
+          }
+        },
+        blue: {
+          label: "Modrý rare barrel",
+          color: 0x2563eb,
+          reward: {
+            scrap: randomInt(10, 22),
+            metalOre: randomInt(6, 15),
+            sulfurOre: randomInt(3, 10),
+            waterBottle: 1
+          }
+        },
+        red: {
+          label: "Červený fuel barrel",
+          color: 0xb91c1c,
+          reward: {
+            lowGradeFuel: randomInt(4, 10),
+            crudeOil: randomInt(2, 7),
+            scrap: randomInt(2, 6)
+          }
+        }
+      }[type || "yellow"];
+
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.72, 0.72, 1.65, 20),
+        new THREE.MeshStandardMaterial({
+          color: config.color,
+          roughness: 0.55,
+          metalness: 0.32
+        })
+      );
+
+      body.position.y = 0.82;
+      body.castShadow = settings.shadows;
+      group.add(body);
+
+      const band1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.76, 0.76, 0.08, 20),
+        materials.metal
+      );
+
+      band1.position.y = 1.48;
+      group.add(band1);
+
+      const band2 = band1.clone();
+      band2.position.y = 0.18;
+      group.add(band2);
+
+      placeOnGround(group, x, z, 0);
+      group.rotation.y = random(0, Math.PI * 2);
+
+      scene.add(trackObject(group));
+
+      addCollisionCircle(x, z, 0.9, "barrel");
+
+      registerInteractable({
+        object: group,
+        type: "loot",
+        label: config.label,
+        hp: 70,
+        maxHp: 70,
+        reward: config.reward,
+        collision: {
+          x: x,
+          z: z,
+          r: 0.9
+        }
+      });
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: type === "blue" ? "rareLoot" : type === "red" ? "fuel" : "loot",
+        label: config.label
+      });
+    }
+
+    function createLootCrate(x, z, rarity) {
+      const rare = rarity === "rare";
+      const group = new THREE.Group();
+
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0, 1.25, 2.0),
+        rare ? materials.rareCrate : materials.crate
+      );
+
+      box.position.y = 0.62;
+      box.castShadow = settings.shadows;
+      group.add(box);
+
+      const band = new THREE.Mesh(
+        new THREE.BoxGeometry(2.1, 0.16, 0.12),
+        materials.metal
+      );
+
+      band.position.set(0, 0.92, 1.02);
+      group.add(band);
+
+      const band2 = band.clone();
+      band2.position.z = -1.02;
+      group.add(band2);
+
+      placeOnGround(group, x, z, 0);
+      group.rotation.y = random(0, Math.PI * 2);
+
+      scene.add(trackObject(group));
+
+      const loot = generateCrateLoot(rarity);
+
+      addCollisionCircle(x, z, 1.25, "crate");
+
+      registerInteractable({
+        object: group,
+        type: rare ? "rareLoot" : "lootCrate",
+        label: rare ? "Rare bedna" : "Bedna",
+        hp: 90,
+        maxHp: 90,
+        openable: true,
+        opened: false,
+        loot: loot,
+        reward: loot,
+        collision: {
+          x: x,
+          z: z,
+          r: 1.25
+        }
+      });
+
+      mapMarkers.push({
+        x: x,
+        z: z,
+        kind: rare ? "rareLoot" : "loot",
+        label: rare ? "Rare crate" : "Crate"
+      });
+    }
+
+    function generateCrateLoot(rarity) {
+      const loot = {};
+
+      if (rarity === "rare") {
+        loot.scrap = randomInt(12, 28);
+        loot.metalOre = randomInt(12, 28);
+        loot.waterBottle = randomInt(1, 2);
+        loot.bandage = randomInt(1, 3);
+
+        if (Math.random() < 0.55) loot.sulfurOre = randomInt(8, 18);
+        if (Math.random() < 0.45) loot.lowGradeFuel = randomInt(2, 8);
+        if (Math.random() < 0.3) loot.crudeOil = randomInt(2, 6);
+      } else {
+        loot.wood = randomInt(20, 55);
+        loot.stone = randomInt(15, 45);
+
+        if (Math.random() < 0.55) loot.scrap = randomInt(2, 9);
+        if (Math.random() < 0.35) loot.waterBottle = 1;
+        if (Math.random() < 0.45) loot.cloth = randomInt(3, 12);
+        if (Math.random() < 0.30) loot.bandage = 1;
+      }
+
+      return loot;
+    }
+
+        function createEnterableWarehouse(x, z, rot) {
+      const group = new THREE.Group();
+
+      addFloor(group, 0, 0, 32, 24, materials.stone);
+      addWall(group, 0, -12, 32, 4, 0.45, materials.metal, true);
+      addWall(group, -16, 0, 24, 4, 0.45, materials.metal, false);
+      addWall(group, 16, 0, 24, 4, 0.45, materials.metal, false);
+      addWall(group, -10, 12, 10, 4, 0.45, materials.metal, true);
+      addWall(group, 10, 12, 10, 4, 0.45, materials.metal, true);
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(33, 0.45, 25), materials.metal);
+      roof.position.y = 4.35;
+      roof.castShadow = settings.shadows;
+      group.add(roof);
+
+      placeStructure(group, x, z, rot);
+      scene.add(trackObject(group));
+
+      addBuildingCollision(x, z, rot, [
+        { x: 0, z: -12, w: 32, d: 0.8 },
+        { x: -16, z: 0, w: 0.8, d: 24 },
+        { x: 16, z: 0, w: 0.8, d: 24 },
+        { x: -10, z: 12, w: 10, d: 0.8 },
+        { x: 10, z: 12, w: 10, d: 0.8 }
+      ]);
+
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Warehouse" });
+    }
+
+    function createEnterableCabin(x, z, rot) {
+      const group = new THREE.Group();
+
+      addFloor(group, 0, 0, 18, 14, materials.wood);
+      addWall(group, 0, -7, 18, 3.4, 0.35, materials.wood, true);
+      addWall(group, -9, 0, 14, 3.4, 0.35, materials.wood, false);
+      addWall(group, 9, 0, 14, 3.4, 0.35, materials.wood, false);
+      addWall(group, -5.5, 7, 7, 3.4, 0.35, materials.wood, true);
+      addWall(group, 5.5, 7, 7, 3.4, 0.35, materials.wood, true);
+
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(13, 3.2, 4), materials.woodDark);
+      roof.position.y = 4.7;
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = settings.shadows;
+      group.add(roof);
+
+      placeStructure(group, x, z, rot);
+      scene.add(trackObject(group));
+
+      addBuildingCollision(x, z, rot, [
+        { x: 0, z: -7, w: 18, d: 0.7 },
+        { x: -9, z: 0, w: 0.7, d: 14 },
+        { x: 9, z: 0, w: 0.7, d: 14 },
+        { x: -5.5, z: 7, w: 7, d: 0.7 },
+        { x: 5.5, z: 7, w: 7, d: 0.7 }
+      ]);
+
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Cabin" });
+    }
+
+    function createEnterableGarage(x, z, rot) {
+      const group = new THREE.Group();
+
+      addFloor(group, 0, 0, 24, 18, materials.stone);
+      addWall(group, 0, -9, 24, 3.8, 0.45, materials.stone, true);
+      addWall(group, -12, 0, 18, 3.8, 0.45, materials.stone, false);
+      addWall(group, 12, 0, 18, 3.8, 0.45, materials.stone, false);
+      addWall(group, -8, 9, 8, 3.8, 0.45, materials.stone, true);
+      addWall(group, 8, 9, 8, 3.8, 0.45, materials.stone, true);
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(24, 0.4, 18), materials.metal);
+      roof.position.y = 4.25;
+      roof.castShadow = settings.shadows;
+      group.add(roof);
+
+      placeStructure(group, x, z, rot);
+      scene.add(trackObject(group));
+
+      addBuildingCollision(x, z, rot, [
+        { x: 0, z: -9, w: 24, d: 0.8 },
+        { x: -12, z: 0, w: 0.8, d: 18 },
+        { x: 12, z: 0, w: 0.8, d: 18 },
+        { x: -8, z: 9, w: 8, d: 0.8 },
+        { x: 8, z: 9, w: 8, d: 0.8 }
+      ]);
+
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Garage" });
+    }
+
+    function createGasStation(x, z, rot) {
+      const group = new THREE.Group();
+
+      addFloor(group, 0, 0, 30, 20, materials.stone);
+      addWall(group, -6, -2, 12, 4.2, 0.45, materials.stone, true);
+      addWall(group, -12, 3, 10, 4.2, 0.45, materials.stone, false);
+      addWall(group, 0, 3, 10, 4.2, 0.45, materials.stone, false);
+      addWall(group, -8, 8, 8, 4.2, 0.45, materials.stone, true);
+
+      const redMaterial = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.7 });
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(32, 0.45, 22), redMaterial);
+      roof.position.y = 5.1;
+      roof.castShadow = settings.shadows;
+      group.add(roof);
+
+      for (let i = 0; i < 2; i++) {
+        const pump = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, 1.2), redMaterial);
+        pump.position.set(6 + i * 4, 1.3, 2);
+        pump.castShadow = settings.shadows;
+        group.add(pump);
+      }
+
+      placeStructure(group, x, z, rot);
+      scene.add(trackObject(group));
+
+      addBuildingCollision(x, z, rot, [
+        { x: -6, z: -2, w: 12, d: 0.8 },
+        { x: -12, z: 3, w: 0.8, d: 10 },
+        { x: 0, z: 3, w: 0.8, d: 10 },
+        { x: -8, z: 8, w: 8, d: 0.8 },
+        { x: 6, z: 2, w: 2, d: 2 },
+        { x: 10, z: 2, w: 2, d: 2 }
+      ]);
+
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Gas station" });
+    }
+
+    function createOutpost(x, z, rot) {
+      const group = new THREE.Group();
+
+      addFloor(group, 0, 0, 38, 30, materials.stone);
+      addWall(group, 0, -15, 38, 3, 0.45, materials.stone, true);
+      addWall(group, -19, 0, 30, 3, 0.45, materials.stone, false);
+      addWall(group, 19, 0, 30, 3, 0.45, materials.stone, false);
+      addWall(group, -13, 15, 12, 3, 0.45, materials.stone, true);
+      addWall(group, 13, 15, 12, 3, 0.45, materials.stone, true);
+
+      const recycler = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.4, 2.2), materials.metal);
+      recycler.position.set(6.3, 1.7, -2);
+      recycler.castShadow = settings.shadows;
+      group.add(recycler);
+
+      const vending = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 3.2, 1.2),
+        new THREE.MeshStandardMaterial({ color: 0x1b9a59, roughness: 0.62, metalness: 0.18 })
+      );
+
+      vending.position.set(2.8, 1.6, -2);
+      vending.castShadow = settings.shadows;
+      group.add(vending);
+
+      placeStructure(group, x, z, rot);
+      scene.add(trackObject(group));
+
+      addBuildingCollision(x, z, rot, [
+        { x: 0, z: -15, w: 38, d: 0.8 },
+        { x: -19, z: 0, w: 0.8, d: 30 },
+        { x: 19, z: 0, w: 0.8, d: 30 },
+        { x: -13, z: 15, w: 12, d: 0.8 },
+        { x: 13, z: 15, w: 12, d: 0.8 },
+        { x: 6.3, z: -2, w: 3, d: 3 },
+        { x: 2.8, z: -2, w: 2, d: 2 }
+      ]);
+
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Outpost" });
+    }
+
+    function createJunkyard(x, z, rot) {
+      const group = new THREE.Group();
+
+      addFloor(group, 0, 0, 34, 24, materials.road);
+
+      for (let i = 0; i < 12; i++) {
+        const scrap = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(random(0.8, 1.8), 0),
+          materials.metal
+        );
+
+        scrap.position.set(random(-14, 14), random(0.6, 1.8), random(-10, 10));
+        scrap.rotation.set(random(0, 3), random(0, 6), random(0, 3));
+        scrap.castShadow = settings.shadows;
+
+        group.add(scrap);
+      }
+
+      placeStructure(group, x, z, rot);
+      scene.add(trackObject(group));
+
+      addCollisionCircle(x, z, 8, "junkyard");
+
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Junkyard" });
+    }
+
+    function createWatchTower(x, z) {
+      const group = new THREE.Group();
+
+      for (let i = 0; i < 4; i++) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 12, 8), materials.wood);
+        leg.position.set(i < 2 ? -2 : 2, 6, i % 2 ? 2 : -2);
+        leg.castShadow = settings.shadows;
+        group.add(leg);
+      }
+
+      const platform = new THREE.Mesh(new THREE.BoxGeometry(6, 0.4, 6), materials.wood);
+      platform.position.y = 10;
+      platform.castShadow = settings.shadows;
+      group.add(platform);
+
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(4.2, 2.1, 4), materials.woodDark);
+      roof.position.y = 12.2;
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = settings.shadows;
+      group.add(roof);
+
+      placeOnGround(group, x, z, 0);
+      scene.add(trackObject(group));
+
+      addCollisionCircle(x, z, 3.8, "watchtower");
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Watch tower" });
+    }
+
+    function createCampfire(x, z) {
+      const group = new THREE.Group();
+
+      for (let i = 0; i < 9; i++) {
+        const angle = (Math.PI * 2 / 9) * i;
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.24, 0), materials.stone);
+        rock.position.set(Math.cos(angle) * 0.9, 0.22, Math.sin(angle) * 0.9);
+        group.add(rock);
+      }
+
+      const log1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.45, 8), materials.wood);
+      log1.position.y = 0.26;
+      log1.rotation.z = Math.PI / 2;
+      log1.rotation.y = 0.55;
+      group.add(log1);
+
+      const log2 = log1.clone();
+      log2.rotation.y = -0.65;
+      group.add(log2);
+
+      for (let i = 0; i < 4; i++) {
+        const flame = new THREE.Mesh(
+          new THREE.ConeGeometry(0.25 + i * 0.05, 1.0 - i * 0.08, 10),
+          new THREE.MeshStandardMaterial({
+            color: i % 2 === 0 ? 0xff7a00 : 0xffd36b,
+            emissive: i % 2 === 0 ? 0xff3c00 : 0xffb000,
+            emissiveIntensity: 1.25,
+            transparent: true,
+            opacity: 0.85
+          })
+        );
+
+        flame.position.set(random(-0.18, 0.18), 0.78 + i * 0.06, random(-0.18, 0.18));
+        flame.rotation.y = random(0, Math.PI);
+        group.add(flame);
+
+        animatedObjects.push({ type: "fire", object: flame });
+      }
+
+      const light = new THREE.PointLight(0xff7a00, 2.1, 20);
+      light.position.set(0, 2.2, 0);
+      group.add(light);
+
+      placeOnGround(group, x, z, 0);
+      scene.add(trackObject(group));
+
+      hazardZones.push({ x: x, z: z, radius: 1.25, damage: 18 });
+      heatZones.push({ x: x, z: z, radius: 13, heat: 22 });
+
+      addCollisionCircle(x, z, 1.4, "campfire");
+      mapMarkers.push({ x: x, z: z, kind: "monument", label: "Campfire" });
+    }
+
+    function addFloor(group, x, z, w, d, mat) {
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.35, d), mat);
+      floor.position.set(x, 0.18, z);
+      floor.castShadow = settings.shadows;
+      floor.receiveShadow = true;
+      group.add(floor);
+    }
+
+    function addWall(group, x, z, length, height, thickness, mat, horizontal) {
+      const wall = new THREE.Mesh(
+        horizontal ? new THREE.BoxGeometry(length, height, thickness) : new THREE.BoxGeometry(thickness, height, length),
+        mat
+      );
+
+      wall.position.set(x, height / 2 + 0.35, z);
+      wall.castShadow = settings.shadows;
+      wall.receiveShadow = true;
+      group.add(wall);
+    }
+
+    function placeStructure(group, x, z, rot) {
+      group.position.set(x, terrainHeight(x, z), z);
+      group.rotation.y = rot || 0;
+    }
+
+    function addBuildingCollision(baseX, baseZ, rot, parts) {
+      parts.forEach(function (part) {
+        const p = rotatePoint(part.x, part.z, rot);
+        const radius = Math.max(part.w, part.d) / 2;
+        addCollisionCircle(baseX + p.x, baseZ + p.z, radius, "wall");
+      });
+    }
+
+    function createHeldTools() {
+      heldGroup = new THREE.Group();
+      heldGroup.position.set(0.62, -0.68, -1.1);
+      heldGroup.rotation.set(-0.16, 0.35, -0.18);
+      camera.add(heldGroup);
+
+      heldModels.rock = makeHeldRock();
+      heldModels.torch = makeHeldTorch();
+      heldModels.stoneHatchet = makeHeldHatchet();
+      heldModels.stonePickaxe = makeHeldPickaxe();
+      heldModels.stoneSpear = makeHeldSpear();
+
+      Object.keys(heldModels).forEach(function (key) {
+        heldModels[key].visible = false;
+        heldGroup.add(heldModels[key]);
+      });
+
+      setHeldToolModel("rock");
+    }
+
+    function makeHeldRock() {
+      const group = new THREE.Group();
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25, 0), materials.stone);
+      rock.scale.set(1.35, 0.9, 1.15);
+      rock.castShadow = true;
+      group.add(rock);
+      return group;
+    }
+
+    function makeHeldTorch() {
+      const group = new THREE.Group();
+
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 1.05, 10), materials.wood);
+      handle.rotation.z = -0.34;
+      handle.position.y = -0.08;
+      group.add(handle);
+
+      const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.25, 10), materials.woodDark);
+      wrap.position.set(0.2, 0.42, 0);
+      wrap.rotation.z = -0.34;
+      group.add(wrap);
+
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.18, 0.44, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0xff8a00,
+          emissive: 0xff4500,
+          emissiveIntensity: 1.35,
+          transparent: true,
+          opacity: 0.9
+        })
+      );
+
+      flame.position.set(0.25, 0.68, 0);
+      flame.rotation.z = -0.34;
+      group.add(flame);
+
+      animatedObjects.push({ type: "heldFlame", object: flame });
+
+      return group;
+    }
+
+    function makeHeldHatchet() {
+      const group = new THREE.Group();
+
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.048, 1.0, 10), materials.wood);
+      handle.rotation.z = -0.58;
+      group.add(handle);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.1), materials.stoneDark);
+      head.position.set(0.3, 0.37, 0);
+      head.rotation.z = -0.18;
+      group.add(head);
+
+      const blade = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.36, 4), materials.stone);
+      blade.position.set(0.48, 0.36, 0);
+      blade.rotation.z = -Math.PI / 2.5;
+      blade.rotation.y = Math.PI / 4;
+      blade.scale.set(0.7, 1.05, 0.22);
+      group.add(blade);
+
+      return group;
+    }
+
+    function makeHeldPickaxe() {
+      const group = new THREE.Group();
+
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.047, 1.12, 10), materials.wood);
+      handle.rotation.z = -0.45;
+      group.add(handle);
+
+      const center = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, 0.09), materials.stoneDark);
+      center.position.set(0.3, 0.42, 0);
+      center.rotation.z = -0.2;
+      group.add(center);
+
+      const spikeA = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.44, 10), materials.stone);
+      spikeA.position.set(0.1, 0.47, 0);
+      spikeA.rotation.z = Math.PI / 2.2;
+      group.add(spikeA);
+
+      const spikeB = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.52, 10), materials.stone);
+      spikeB.position.set(0.52, 0.38, 0);
+      spikeB.rotation.z = -Math.PI / 2.25;
+      group.add(spikeB);
+
+      return group;
+    }
+
+    function makeHeldSpear() {
+      const group = new THREE.Group();
+
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.032, 1.55, 10), materials.wood);
+      shaft.rotation.z = -0.34;
+      group.add(shaft);
+
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 12), materials.stone);
+      tip.position.set(0.25, 0.73, 0);
+      tip.rotation.z = -0.34;
+      group.add(tip);
+
+      return group;
+    }
+
+    function setHeldToolModel(toolId) {
+      Object.keys(heldModels).forEach(function (key) {
+        heldModels[key].visible = key === toolId;
+      });
+
+      if (torchLight) {
+        torchLight.intensity = toolId === "torch" ? 2.4 : 0;
+      }
+    }
+
+    function createBuildGhost() {
+      buildState.ghost = new THREE.Group();
+      buildState.ghost.visible = false;
+      scene.add(buildState.ghost);
+    }
+
+    function updateBuildGhost() {
+      if (!buildState.ghost) return;
+
+      clearGroup(buildState.ghost);
+
+      if (!buildState.previewActive || state.paused || state.inventoryOpen || state.mapOpen || state.settingsOpen || state.buildOpen) {
+        buildState.ghost.visible = false;
+        return;
+      }
+
+      const piece = getBuildPiece();
+      if (!piece) return;
+
+      const pos = getBuildPosition();
+      const free = canAfford(piece.cost) && isBuildPositionFree(pos.x, pos.z, piece);
+      const mat = free ? materials.ghostGood : materials.ghostBad;
+
+      if (piece.id === "foundation") {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, 0.35, 6), mat);
+        mesh.position.y = 0.18;
+        buildState.ghost.add(mesh);
+      }
+
+      if (piece.id === "wall") {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, 3.1, 0.35), mat);
+        mesh.position.y = 1.55;
+        buildState.ghost.add(mesh);
+      }
+
+      if (piece.id === "doorframe") {
+        const left = new THREE.Mesh(new THREE.BoxGeometry(2, 3.1, 0.35), mat);
+        left.position.set(-2, 1.55, 0);
+        buildState.ghost.add(left);
+
+        const right = new THREE.Mesh(new THREE.BoxGeometry(2, 3.1, 0.35), mat);
+        right.position.set(2, 1.55, 0);
+        buildState.ghost.add(right);
+
+        const top = new THREE.Mesh(new THREE.BoxGeometry(6, 0.55, 0.35), mat);
+        top.position.set(0, 2.85, 0);
+        buildState.ghost.add(top);
+      }
+
+      if (piece.id === "roof") {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, 0.35, 6), mat);
+        mesh.position.y = 3.35;
+        buildState.ghost.add(mesh);
+      }
+
+      buildState.ghost.position.set(pos.x, terrainHeight(pos.x, pos.z) + 0.04, pos.z);
+      buildState.ghost.rotation.y = buildState.rotation;
+      buildState.ghost.visible = true;
+    }
+
+    function placeBuildPiece() {
+      buildState.previewActive = true;
+
+      const piece = getBuildPiece();
+      const pos = getBuildPosition();
+
+      if (!piece) return;
+
+      if (!canAfford(piece.cost)) {
+        showMessage("Nemáš suroviny. Potřeba: " + costText(piece.cost));
+        return;
+      }
+
+      if (!isBuildPositionFree(pos.x, pos.z, piece)) {
+        showMessage("Tady nejde stavět.");
+        return;
+      }
+
+      Object.keys(piece.cost).forEach(function (key) {
+        player[key] -= piece.cost[key];
+      });
+
+      const group = new THREE.Group();
+
+      if (piece.id === "foundation") {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, 0.35, 6), materials.wood);
+        mesh.position.y = 0.18;
+        mesh.castShadow = settings.shadows;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+
+      if (piece.id === "wall") {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, 3.1, 0.35), materials.wood);
+        mesh.position.y = 1.55;
+        mesh.castShadow = settings.shadows;
+        group.add(mesh);
+        addCollisionCircle(pos.x, pos.z, 3, "builtWall");
+      }
+
+      if (piece.id === "doorframe") {
+        const left = new THREE.Mesh(new THREE.BoxGeometry(2, 3.1, 0.35), materials.wood);
+        left.position.set(-2, 1.55, 0);
+        left.castShadow = settings.shadows;
+        group.add(left);
+
+        const right = new THREE.Mesh(new THREE.BoxGeometry(2, 3.1, 0.35), materials.wood);
+        right.position.set(2, 1.55, 0);
+        right.castShadow = settings.shadows;
+        group.add(right);
+
+        const top = new THREE.Mesh(new THREE.BoxGeometry(6, 0.55, 0.35), materials.wood);
+        top.position.set(0, 2.85, 0);
+        top.castShadow = settings.shadows;
+        group.add(top);
+
+        const a = rotatePoint(-2, 0, buildState.rotation);
+        const b = rotatePoint(2, 0, buildState.rotation);
+        addCollisionCircle(pos.x + a.x, pos.z + a.z, 1.2, "doorframe");
+        addCollisionCircle(pos.x + b.x, pos.z + b.z, 1.2, "doorframe");
+      }
+
+      if (piece.id === "roof") {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, 0.35, 6), materials.wood);
+        mesh.position.y = 3.35;
+        mesh.castShadow = settings.shadows;
+        group.add(mesh);
+      }
+
+      group.position.set(pos.x, terrainHeight(pos.x, pos.z) + 0.03, pos.z);
+      group.rotation.y = buildState.rotation;
+      scene.add(trackObject(group));
+
+      mapMarkers.push({ x: pos.x, z: pos.z, kind: "build", label: piece.name });
+
+      showMessage("Postavil jsi: " + piece.name);
+      renderInventory();
+      renderCrafting();
+      renderBuildMenu();
+      drawBigMap();
+    }
+
+    function getBuildPiece() {
+      return buildPieces.find(function (piece) {
+        return piece.id === buildState.selected;
+      });
+    }
+
+    function getBuildPosition() {
+      const distance = 7.2;
+
+      const x = player.x - Math.sin(player.yaw) * distance;
+      const z = player.z - Math.cos(player.yaw) * distance;
+
+      return {
+        x: Math.round(x / 3) * 3,
+        z: Math.round(z / 3) * 3
+      };
+    }
+
+    function isBuildPositionFree(x, z, piece) {
+      const radius = piece.id === "foundation" || piece.id === "roof" ? 3.4 : 2.2;
+
+      if (Math.hypot(x, z) > WORLD_RADIUS - 18) return false;
+
+      for (const c of collisionObjects) {
+        const dist = Math.hypot(x - c.x, z - c.z);
+        if (dist < radius + c.r * 0.55) return false;
+      }
+
+      return true;
+    }
+
+    function createAnimals(count) {
+      const types = ["boar", "deer", "wolf", "bear"];
+
+      for (let i = 0; i < count; i++) {
+        const p = randomIslandPoint();
+
+        if (!isSafeSpawn(p.x, p.z)) continue;
+
+        createAnimal(p.x, p.z, randomChoice(types));
+      }
+    }
+
+    function createAnimal(x, z, kind) {
+      const config = {
+        boar: {
+          label: "Divoké prase",
+          hp: 80,
+          damage: 7,
+          aggressive: false,
+          material: materials.animalDark,
+          scale: [1.6, 0.82, 0.72],
+          speed: 1.25,
+          reward: { animalFat: randomInt(10, 18), cloth: randomInt(5, 10) }
+        },
+        deer: {
+          label: "Jelen",
+          hp: 55,
+          damage: 0,
+          aggressive: false,
+          material: materials.animalBrown,
+          scale: [1.55, 1.0, 0.62],
+          speed: 1.55,
+          reward: { animalFat: randomInt(6, 12), cloth: randomInt(8, 16) }
+        },
+        wolf: {
+          label: "Vlk",
+          hp: 70,
+          damage: 10,
+          aggressive: true,
+          material: materials.wolf,
+          scale: [1.55, 0.76, 0.52],
+          speed: 1.85,
+          reward: { animalFat: randomInt(5, 9), cloth: randomInt(8, 14) }
+        },
+        bear: {
+          label: "Medvěd",
+          hp: 160,
+          damage: 18,
+          aggressive: true,
+          material: materials.bear,
+          scale: [2.35, 1.22, 1.05],
+          speed: 1.25,
+          reward: { animalFat: randomInt(18, 32), cloth: randomInt(14, 24) }
+        }
+      }[kind];
+
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 10), config.material);
+      body.scale.set(config.scale[0], config.scale[1], config.scale[2]);
+      body.position.y = config.scale[1] + 0.35;
+      body.castShadow = settings.shadows;
+      group.add(body);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), config.material);
+      head.scale.set(config.scale[2], config.scale[1] * 0.7, config.scale[2] * 0.9);
+      head.position.set(0, config.scale[1] + 0.62, -config.scale[0] * 0.78);
+      head.castShadow = settings.shadows;
+      group.add(head);
+
+      const snout = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), config.material);
+      snout.scale.set(0.8, 0.45, 1.0);
+      snout.position.set(0, config.scale[1] + 0.55, -config.scale[0] * 1.04);
+      group.add(snout);
+
+      for (let i = 0; i < 4; i++) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.13, 0.72, 8), config.material);
+        leg.position.set(
+          i < 2 ? -config.scale[2] * 0.42 : config.scale[2] * 0.42,
+          0.36,
+          i % 2 === 0 ? -config.scale[0] * 0.32 : config.scale[0] * 0.32
+        );
+        group.add(leg);
+      }
+
+      placeOnGround(group, x, z, 0);
+      group.rotation.y = random(0, Math.PI * 2);
+      scene.add(trackObject(group));
+
+      const item = {
+        object: group,
+        type: "animal",
+        label: config.label,
+        hp: config.hp,
+        maxHp: config.hp,
+        reward: config.reward,
+        collision: { x: x, z: z, r: kind === "bear" ? 1.75 : 1.15 },
+        animalData: {
+          kind: kind,
+          dir: random(0, Math.PI * 2),
+          speed: config.speed,
+          aggressive: config.aggressive,
+          damage: config.damage,
+          scareTimer: 0,
+          attackCooldown: random(0, 2)
+        }
+      };
+
+      registerInteractable(item);
+      animalItems.push(item);
+      animatedObjects.push({ type: "animal", item: item });
+      addCollisionCircle(x, z, item.collision.r, "animal", item);
+
+      mapMarkers.push({ x: x, z: z, kind: "animal", label: item.label });
+    }
+
+    function createClouds(count) {
+      for (let i = 0; i < count; i++) {
+        const cloud = new THREE.Group();
+
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 1,
+          transparent: true,
+          opacity: 0.86
+        });
+
+        const parts = 3 + Math.floor(Math.random() * 3);
+
+        for (let j = 0; j < parts; j++) {
+          const part = new THREE.Mesh(new THREE.SphereGeometry(random(1.6, 3.2), 10, 8), material);
+          part.position.set(j * 1.8, random(-0.4, 0.5), random(-0.8, 0.8));
+          part.scale.y = random(0.38, 0.62);
+          cloud.add(part);
+        }
+
+        cloud.position.set(random(-430, 430), random(75, 112), random(-430, 430));
+        scene.add(trackObject(cloud));
+
+        animatedObjects.push({ type: "cloud", object: cloud, speed: random(0.18, 0.52) });
+      }
+    }
+
+    function registerInteractable(item) {
+      interactables.push(item);
+
+      item.object.traverse(function (child) {
+        if (child.isMesh) {
+          child.userData.interactable = item;
+          rayTargets.push(child);
+        }
+      });
+    }
+
+    function removeInteractable(item) {
+      scene.remove(item.object);
+
+      const index = interactables.indexOf(item);
+      if (index !== -1) interactables.splice(index, 1);
+
+      for (let i = rayTargets.length - 1; i >= 0; i--) {
+        if (rayTargets[i].userData.interactable === item) {
+          rayTargets.splice(i, 1);
+        }
+      }
+
+      if (item.collision) {
+        removeCollisionCircle(item.collision.x, item.collision.z, item.collision.r);
+      }
+
+      const animalIndex = animalItems.indexOf(item);
+      if (animalIndex !== -1) animalItems.splice(animalIndex, 1);
+    }
+
+    function hitTarget() {
+      const now = performance.now();
+
+      if (now - player.lastHit < 320) return;
+
+      player.lastHit = now;
+      heldState.swing = 0.18;
+
+      if (!state.currentTarget) {
+        showMessage("Namiř na strom, ore, barel, bednu nebo zvíře.");
+        return;
+      }
+
+      const tool = tools[player.selectedSlot];
+      const target = state.currentTarget;
+
+      const isOre = ["stone", "metalOre", "sulfurOre"].includes(target.type);
+      const isWood = target.type === "wood";
+      const isAnimal = target.type === "animal";
+      const isLoot = ["loot", "rareLoot", "lootCrate"].includes(target.type);
+
+      if (isOre && !tool.canOre) {
+        showMessage(tool.name + " není vhodný na ore. Použij kámen nebo Stone krumpáč.");
+        flashHit();
+        return;
+      }
+
+      if (isWood && !tool.canWood) {
+        showMessage(tool.name + " není vhodný na strom. Použij kámen nebo Stone sekeru.");
+        flashHit();
+        return;
+      }
+
+      let damage = tool.damage;
+
+      if (tool.best === "wood" && isWood) damage *= 1.55;
+      if (tool.best === "ore" && isOre) damage *= 1.55;
+      if (tool.best === "animal" && isAnimal) damage *= 1.55;
+
+      if (tool.id === "rock" && isOre) damage *= 0.62;
+      if (tool.id === "rock" && isWood) damage *= 0.72;
+      if (isLoot) damage *= 1.1;
+
+      if (target.animalData) {
+        target.animalData.scareTimer = 3;
+      }
+
+      target.hp = Math.max(0, target.hp - damage);
+      flashHit();
+
+      if (target.hp <= 0) {
+        collectReward(target, tool);
+        removeInteractable(target);
+        state.currentTarget = null;
+      } else {
+        showMessage(tool.name + " zasáhl objekt. HP: " + Math.ceil(target.hp));
+      }
+    }
+
+    function collectReward(item, tool) {
+      let multiplier = tool.gather || 1;
+
+      const isOre = ["stone", "metalOre", "sulfurOre"].includes(item.type);
+      const isWood = item.type === "wood";
+      const isAnimal = item.type === "animal";
+
+      if (isOre && tool.id === "rock") multiplier = 0.45;
+      if (isOre && tool.id === "stonePickaxe") multiplier = 1.45;
+
+      if (isWood && tool.id === "rock") multiplier = 0.55;
+      if (isWood && tool.id === "stoneHatchet") multiplier = 1.45;
+
+      if (isAnimal && tool.id === "stoneSpear") multiplier = 1.35;
+
+      const parts = [];
+
+      Object.keys(item.reward).forEach(function (key) {
+        let amount = item.reward[key];
+
+        if (key !== "hunger") amount = Math.ceil(amount * multiplier);
+
+        if (key === "hunger") {
+          player.hunger = clamp(player.hunger + amount, 0, 100);
+        } else {
+          player[key] += amount;
+        }
+
+        parts.push(resourceName(key) + " +" + amount);
+        addResourceFeed(resourceIcon(key) + " " + resourceName(key) + " +" + amount);
+      });
+
+      showMessage("Získal jsi: " + parts.join(", "));
+      renderInventory();
+      renderCrafting();
+    }
+
+    function interact() {
+      if (state.currentTarget && state.currentTarget.openable) {
+        openCrate(state.currentTarget);
+        return;
+      }
+
+      if (isNearWater()) {
+        player.thirst = clamp(player.thirst + 35, 0, 100);
+        showMessage("Napil ses z vody. Žízeň +35.");
+        addResourceFeed("💧 voda +35");
+        return;
+      }
+
+      if (player.waterBottle > 0) {
+        player.waterBottle -= 1;
+        player.thirst = clamp(player.thirst + 55, 0, 100);
+        showMessage("Vypil jsi Water bottle. Žízeň +55.");
+        addResourceFeed("💧 water bottle -1");
+        renderInventory();
+        return;
+      }
+
+      showMessage("Tady není co otevřít ani kde se napít.");
+    }
+
+    function openCrate(crate) {
+      if (crate.opened) return;
+
+      crate.opened = true;
+
+      Object.keys(crate.loot).forEach(function (key) {
+        const amount = crate.loot[key];
+        player[key] += amount;
+        addResourceFeed(resourceIcon(key) + " " + resourceName(key) + " +" + amount);
+      });
+
+      showMessage("Otevřel jsi bednu.");
+      removeInteractable(crate);
+      renderInventory();
+      renderCrafting();
+    }
+
+    function useBandage() {
+      if (player.bandage <= 0) {
+        showMessage("Nemáš bandage. Vycrafti ji z cloth.");
+        return;
+      }
+
+      if (state.bleeding <= 0 && player.health >= 100) {
+        showMessage("Bandage teď nepotřebuješ.");
+        return;
+      }
+
+      player.bandage -= 1;
+      state.bleeding = 0;
+      player.health = clamp(player.health + 8, 0, 100);
+
+      showMessage("Použil jsi bandage. Krvácení zastaveno.");
+      renderInventory();
+      renderCrafting();
+    }
+
+    function onKeyDown(event) {
+      if (state.waitingForBind) {
+        event.preventDefault();
+
+        keybinds[state.waitingForBind] = event.code;
+        state.waitingForBind = null;
+
+        ui.bindInfo.textContent = "Klávesa byla změněna.";
+        renderSettings();
+        return;
+      }
+
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "ShiftRight", "Tab"].includes(event.code)) {
+        event.preventDefault();
+      }
+
+      if (event.code === keybinds.inventory || event.code === "KeyI") {
+        toggleInventory();
+        return;
+      }
+
+      if (event.code === keybinds.map) {
+        toggleMap();
+        return;
+      }
+
+      if (event.code === keybinds.settings) {
+        toggleSettings();
+        return;
+      }
+
+      if (event.code === keybinds.buildMenu) {
+        toggleBuildMenu();
+        return;
+      }
+
+      if (event.code === keybinds.buildPlace) {
+        placeBuildPiece();
+        return;
+      }
+
+      if (event.code === keybinds.buildRotate) {
+        buildState.rotation += Math.PI / 2;
+        buildState.previewActive = true;
+        showMessage("Build díl otočen.");
+        return;
+      }
+
+      if (event.code === keybinds.interact) {
+        interact();
+        return;
+      }
+
+      if (event.code === keybinds.bandage) {
+        useBandage();
+        return;
+      }
+
+      if (event.code === keybinds.jump && player.grounded && !state.paused) {
+        player.velocityY = JUMP_POWER;
+        player.grounded = false;
+        return;
+      }
+
+      keys[event.code] = true;
+
+      if (event.code === "Digit1") selectTool(0);
+      if (event.code === "Digit2") selectTool(1);
+      if (event.code === "Digit3") selectTool(2);
+      if (event.code === "Digit4") selectTool(3);
+      if (event.code === "Digit5") selectTool(4);
+    }
+
+    function onKeyUp(event) {
+      keys[event.code] = false;
+    }
+
+    function onMouseMove(event) {
+      if (
+        state.paused ||
+        state.inventoryOpen ||
+        state.mapOpen ||
+        state.settingsOpen ||
+        state.buildOpen ||
+        document.pointerLockElement !== document.body
+      ) {
+        return;
+      }
+
+      player.yaw -= event.movementX * 0.0023;
+      player.pitch -= event.movementY * 0.0023;
+      player.pitch = clamp(player.pitch, -1.28, 1.28);
+    }
+
+    function selectTool(index) {
+      const tool = tools[index];
+
+      if (!tool) return;
+
+      if (!isToolUnlocked(tool.id)) {
+        showMessage(tool.name + " ještě nemáš vycraftěný.");
+        return;
+      }
+
+      player.selectedSlot = index;
+      heldState.switch = 0.24;
+
+      setHeldToolModel(tool.id);
+      renderHotbar();
+    }
+
+    function toggleInventory(forceOpen) {
+      state.inventoryOpen = forceOpen ? true : !state.inventoryOpen;
+      state.mapOpen = false;
+      state.settingsOpen = false;
+      state.buildOpen = false;
+      state.paused = false;
+      buildState.previewActive = false;
+
+      ui.inventoryOverlay.classList.toggle("hidden", !state.inventoryOpen);
+      ui.mapOverlay.classList.add("hidden");
+      ui.settingsOverlay.classList.add("hidden");
+      ui.buildOverlay.classList.add("hidden");
+      ui.pauseOverlay.classList.add("hidden");
+
+      if (state.inventoryOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.inventoryOpen) resumeGame();
+
+      renderInventory();
+      renderCrafting();
+    }
+
+    function toggleMap(forceOpen) {
+      state.mapOpen = forceOpen ? true : !state.mapOpen;
+      state.inventoryOpen = false;
+      state.settingsOpen = false;
+      state.buildOpen = false;
+      state.paused = false;
+      buildState.previewActive = false;
+
+      ui.mapOverlay.classList.toggle("hidden", !state.mapOpen);
+      ui.inventoryOverlay.classList.add("hidden");
+      ui.settingsOverlay.classList.add("hidden");
+      ui.buildOverlay.classList.add("hidden");
+      ui.pauseOverlay.classList.add("hidden");
+
+      if (state.mapOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.mapOpen) resumeGame();
+
+      drawBigMap();
+    }
+
+    function toggleSettings(forceOpen) {
+      state.settingsOpen = forceOpen ? true : !state.settingsOpen;
+      state.inventoryOpen = false;
+      state.mapOpen = false;
+      state.buildOpen = false;
+      state.paused = false;
+      buildState.previewActive = false;
+
+      ui.settingsOverlay.classList.toggle("hidden", !state.settingsOpen);
+      ui.inventoryOverlay.classList.add("hidden");
+      ui.mapOverlay.classList.add("hidden");
+      ui.buildOverlay.classList.add("hidden");
+      ui.pauseOverlay.classList.add("hidden");
+
+      if (state.settingsOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.settingsOpen) resumeGame();
+
+      renderSettings();
+    }
+
+    function toggleBuildMenu(forceOpen) {
+      state.buildOpen = forceOpen ? true : !state.buildOpen;
+      state.inventoryOpen = false;
+      state.mapOpen = false;
+      state.settingsOpen = false;
+      state.paused = false;
+
+      ui.buildOverlay.classList.toggle("hidden", !state.buildOpen);
+      ui.inventoryOverlay.classList.add("hidden");
+      ui.mapOverlay.classList.add("hidden");
+      ui.settingsOverlay.classList.add("hidden");
+      ui.pauseOverlay.classList.add("hidden");
+
+      buildState.previewActive = !state.buildOpen;
+
+      if (state.buildOpen && document.pointerLockElement === document.body) {
+        document.exitPointerLock();
+      }
+
+      if (!state.buildOpen) {
+        buildState.previewActive = true;
+        resumeGame();
+      }
+
+      renderBuildMenu();
+    }
+
+    function movePlayer(delta) {
+      let forward = 0;
+      let side = 0;
+
+      if (keys[keybinds.forward]) forward += 1;
+      if (keys[keybinds.backward]) forward -= 1;
+      if (keys[keybinds.right]) side += 1;
+      if (keys[keybinds.left]) side -= 1;
+
+      const sprint = keys[keybinds.sprint] || keys.ShiftRight;
+      const speed = player.speed * (sprint ? 1.55 : 1);
+      const length = Math.hypot(forward, side);
+
+      let nextX = player.x;
+      let nextZ = player.z;
+
+      if (length > 0) {
+        forward /= length;
+        side /= length;
+
+        const sin = Math.sin(player.yaw);
+        const cos = Math.cos(player.yaw);
+
+        nextX += (-sin * forward + cos * side) * speed * delta;
+        nextZ += (-cos * forward - sin * side) * speed * delta;
+      }
+
+      const distance = Math.hypot(nextX, nextZ);
+
+      if (distance > WORLD_RADIUS - 12) {
+        nextX *= (WORLD_RADIUS - 12) / distance;
+        nextZ *= (WORLD_RADIUS - 12) / distance;
+      }
+
+      const fixed = resolveCollisions(nextX, nextZ);
+
+      player.x = fixed.x;
+      player.z = fixed.z;
+
+      player.velocityY -= GRAVITY * delta;
+      player.airY += player.velocityY * delta;
+
+      if (player.airY <= 0) {
+        if (!player.grounded) {
+          const fallDamage = Math.max(0, -player.velocityY - 12) * 1.5;
+
+          if (fallDamage > 1) {
+            player.health = clamp(player.health - fallDamage, 0, 100);
+            state.bleeding = clamp(state.bleeding + fallDamage * 1.25, 0, 100);
+            showMessage("Spadl jsi z výšky. Krvácíš.");
+          }
+        }
+
+        player.airY = 0;
+        player.velocityY = 0;
+        player.grounded = true;
+      } else {
+        player.grounded = false;
+      }
+
+      player.y = terrainHeight(player.x, player.z) + EYE_HEIGHT + player.airY;
+
+      heldState.bob += delta * (length > 0 ? 9 : 2);
+    }
+
+    function resolveCollisions(x, z) {
+      let newX = x;
+      let newZ = z;
+
+      for (const object of collisionObjects) {
+        const dx = newX - object.x;
+        const dz = newZ - object.z;
+        const distance = Math.hypot(dx, dz);
+        const minDistance = PLAYER_RADIUS + object.r;
+
+        if (distance < minDistance && distance > 0.001) {
+          const push = minDistance - distance;
+          const nx = dx / distance;
+          const nz = dz / distance;
+
+          newX += nx * push;
+          newZ += nz * push;
+        }
+      }
+
+      return {
+        x: newX,
+        z: newZ
+      };
+    }
+
+    function updateCamera() {
+      player.y = terrainHeight(player.x, player.z) + EYE_HEIGHT + player.airY;
+
+      camera.position.set(player.x, player.y, player.z);
+      camera.rotation.order = "YXZ";
+      camera.rotation.y = player.yaw;
+      camera.rotation.x = player.pitch;
+    }
+
+    function updateTarget() {
+      raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+
+      const hits = raycaster.intersectObjects(rayTargets, false);
+      state.currentTarget = null;
+
+      for (const hit of hits) {
+        const item = hit.object.userData.interactable;
+        if (!item) continue;
+
+        const distance = camera.position.distanceTo(getWorldPos(item.object));
+
+        if (distance <= 7) {
+          state.currentTarget = item;
+          break;
+        }
+      }
+
+      if (state.currentTarget) {
+        ui.targetPanel.classList.remove("hidden");
+        ui.targetName.textContent = state.currentTarget.label;
+
+        if (state.currentTarget.openable) {
+          ui.targetText.textContent = "Stiskni E pro otevření";
+          ui.targetFill.style.width = "100%";
+        } else {
+          ui.targetText.textContent =
+            "HP: " +
+            Math.ceil(state.currentTarget.hp) +
+            " / " +
+            state.currentTarget.maxHp;
+
+          ui.targetFill.style.width =
+            (state.currentTarget.hp / state.currentTarget.maxHp * 100) + "%";
+        }
+      } else {
+        ui.targetPanel.classList.add("hidden");
+      }
+    }
+
+    function updateHeldTool(delta) {
+      if (!heldGroup) return;
+
+      const moving =
+        keys[keybinds.forward] ||
+        keys[keybinds.backward] ||
+        keys[keybinds.left] ||
+        keys[keybinds.right];
+
+      const bob = moving ? Math.sin(heldState.bob * 1.6) * 0.03 : Math.sin(heldState.bob * 0.8) * 0.01;
+      const bobY = moving ? Math.abs(Math.cos(heldState.bob * 1.6)) * 0.025 : 0;
+
+      let swingRot = 0;
+      let swingPos = 0;
+
+      if (heldState.swing > 0) {
+        const progress = 1 - heldState.swing / 0.18;
+        swingRot = Math.sin(progress * Math.PI) * -1.05;
+        swingPos = Math.sin(progress * Math.PI) * 0.12;
+        heldState.swing = Math.max(0, heldState.swing - delta);
+      }
+
+      let switchDrop = 0;
+
+      if (heldState.switch > 0) {
+        const progress = 1 - heldState.switch / 0.24;
+        switchDrop = Math.sin(progress * Math.PI) * 0.28;
+        heldState.switch = Math.max(0, heldState.switch - delta);
+      }
+
+      heldGroup.position.set(0.62 + bob, -0.68 - bobY + switchDrop + swingPos, -1.1);
+      heldGroup.rotation.set(-0.16 + swingRot, 0.35, -0.18 + swingRot * 0.25);
+    }
+
+    function updateSurvival(delta) {
+      player.hunger = clamp(player.hunger - delta * (100 / 600), 0, 100);
+      player.thirst = clamp(player.thirst - delta * (100 / 420), 0, 100);
+
+      if (player.hunger <= 0) player.health = clamp(player.health - delta * 1.6, 0, 100);
+      if (player.thirst <= 0) player.health = clamp(player.health - delta * 2.4, 0, 100);
+
+      if (state.bleeding > 0) {
+        player.health = clamp(player.health - delta * (0.08 * state.bleeding), 0, 100);
+      }
+    }
+
+    function updateHazards(delta) {
+      hazardZones.forEach(function (zone) {
+        const distance = Math.hypot(player.x - zone.x, player.z - zone.z);
+
+        if (distance < zone.radius) {
+          player.health = clamp(player.health - zone.damage * delta, 0, 100);
+          showMessage("Stojíš v ohni. Dostáváš damage.");
+        }
+      });
+    }
+
+    function updateTemperature(delta) {
+      const dayValue = (Math.sin(state.dayTimer) + 1) / 2;
+      let targetTemp = 8 + dayValue * 18;
+
+      if (isNearWater()) targetTemp -= 3;
+
+      heatZones.forEach(function (zone) {
+        const distance = Math.hypot(player.x - zone.x, player.z - zone.z);
+
+        if (distance < zone.radius) {
+          targetTemp += zone.heat * (1 - distance / zone.radius);
+        }
+      });
+
+      state.temperature += (targetTemp - state.temperature) * delta * 0.7;
+
+      if (state.temperature < 4) player.health = clamp(player.health - delta * 0.75, 0, 100);
+      if (state.temperature > 42) player.thirst = clamp(player.thirst - delta * 1.2, 0, 100);
+    }
+
+    function updateDayNight(delta) {
+      state.dayTimer += delta * 0.022;
+
+      const t = (Math.sin(state.dayTimer) + 1) / 2;
+
+      sunLight.intensity = 0.36 + t * 1.8;
+      ambientLight.intensity = 0.28 + t * 0.58;
+
+      renderer.toneMappingExposure = settings.shaders ? 0.68 + t * 0.42 : 0.92;
+    }
+
+    function updateAnimatedObjects(delta) {
+      state.time += delta;
+
+      animatedObjects.forEach(function (entry) {
+       if (entry.type === "water") {
+  entry.object.material.opacity = 0.78 + Math.sin(state.time * 2.2) * 0.08;
+}
+
+        if (entry.type === "cloud") {
+          entry.object.position.x += entry.speed * delta;
+
+          if (entry.object.position.x > 460) {
+            entry.object.position.x = -460;
+          }
+        }
+
+        if (entry.type === "fire") {
+          entry.object.scale.y = 1 + Math.sin(state.time * 12) * 0.18;
+          entry.object.rotation.y += delta * 2.2;
+        }
+
+        if (entry.type === "heldFlame") {
+          entry.object.scale.y = 1 + Math.sin(state.time * 13) * 0.12;
+          entry.object.rotation.y += delta * 4;
+        }
+
+        if (entry.type === "animal") {
+          updateAnimal(entry.item, delta);
+        }
+      });
+    }
+
+    function updateAnimal(item, delta) {
+      if (!item || !item.object || !item.animalData) return;
+
+      const data = item.animalData;
+      const dxPlayer = player.x - item.object.position.x;
+      const dzPlayer = player.z - item.object.position.z;
+      const playerDistance = Math.hypot(dxPlayer, dzPlayer);
+
+      if (data.aggressive && playerDistance < 18) {
+        data.dir = Math.atan2(dxPlayer, dzPlayer);
+
+        if (playerDistance < 2.35) {
+          data.attackCooldown -= delta;
+
+          if (data.attackCooldown <= 0) {
+            player.health = clamp(player.health - data.damage, 0, 100);
+            state.bleeding = clamp(state.bleeding + data.damage * 1.3, 0, 100);
+            data.attackCooldown = data.kind === "bear" ? 1.5 : 1.1;
+            showMessage(item.label + " tě zasáhl. Krvácíš. H = bandage.");
+          }
+        }
+      } else if (data.scareTimer > 0) {
+        data.scareTimer -= delta;
+
+        const awayX = item.object.position.x - player.x;
+        const awayZ = item.object.position.z - player.z;
+        data.dir = Math.atan2(awayX, awayZ);
+      } else if (Math.random() < 0.01) {
+        data.dir += random(-0.8, 0.8);
+      }
+
+      const speed =
+        data.speed *
+        (data.scareTimer > 0 ? 2.2 : 1) *
+        (data.aggressive && playerDistance < 18 ? 1.35 : 1);
+
+      let nx = item.object.position.x + Math.sin(data.dir) * speed * delta;
+      let nz = item.object.position.z + Math.cos(data.dir) * speed * delta;
+
+      if (Math.hypot(nx, nz) > WORLD_RADIUS - 18) {
+        data.dir += Math.PI;
+        nx = item.object.position.x;
+        nz = item.object.position.z;
+      }
+
+      item.object.position.x = nx;
+      item.object.position.z = nz;
+      item.object.position.y = terrainHeight(nx, nz);
+      item.object.rotation.y = data.dir + Math.PI;
+
+      if (item.collision) {
+        item.collision.x = nx;
+        item.collision.z = nz;
+        updateAnimalCollision(item);
+      }
+    }
+
+    function updateAnimalCollision(item) {
+      for (const collision of collisionObjects) {
+        if (collision.owner === item) {
+          collision.x = item.collision.x;
+          collision.z = item.collision.z;
+          return;
+        }
+      }
+    }
+
+    function updateUI() {
+      ui.hpFill.style.width = player.health + "%";
+      ui.foodFill.style.width = player.hunger + "%";
+      ui.waterFill.style.width = player.thirst + "%";
+      ui.tempFill.style.width = clamp((state.temperature + 10) / 60 * 100, 0, 100) + "%";
+      ui.bleedFill.style.width = state.bleeding + "%";
+      ui.bandageFill.style.width = clamp(player.bandage * 12, 0, 100) + "%";
+
+      ui.hpText.textContent = Math.round(player.health);
+      ui.foodText.textContent = Math.round(player.hunger);
+      ui.waterText.textContent = Math.round(player.thirst);
+      ui.tempText.textContent = Math.round(state.temperature) + "°C";
+      ui.bleedText.textContent = Math.round(state.bleeding);
+      ui.bandageText.textContent = player.bandage;
+
+      const status = [];
+
+      if (player.hunger < 20) status.push("Máš hlad");
+      if (player.thirst < 20) status.push("Máš žízeň");
+      if (state.temperature < 5) status.push("Je ti zima");
+      if (state.temperature > 38) status.push("Je ti horko");
+      if (state.bleeding > 0) status.push("Krvácíš - H = bandage");
+
+      ui.statusText.textContent = status.length ? "Status: " + status.join(" | ") : "Status: OK";
+
+      updateCompass();
+      ui.fpsCounter.textContent = "FPS: " + currentFps;
+    }
+
+    function updateCompass() {
+      const degrees = ((-player.yaw * 180 / Math.PI) % 360 + 360) % 360;
+      const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      const activeDirection = directions[Math.round(degrees / 45) % 8];
+
+      ui.compassReadout.textContent = activeDirection + " " + Math.round(degrees) + "°";
+
+      const pixelsPerDegree = 4.8;
+      const offset = -degrees * pixelsPerDegree;
+      ui.compassTrack.style.transform = "translateX(" + offset + "px)";
+
+      document.querySelectorAll(".compassMark").forEach(function (mark) {
+        mark.classList.remove("active");
+
+        const markDeg = Number(mark.dataset.deg);
+        const diff = angleDifference(degrees, markDeg);
+
+        if (Math.abs(diff) < 8) {
+          mark.classList.add("active");
+        }
+      });
+
+      if (state.waypoint) {
+        const dx = state.waypoint.x - player.x;
+        const dz = state.waypoint.z - player.z;
+        const angle = ((Math.atan2(dx, dz) * 180 / Math.PI) + 360) % 360;
+        const dir = directions[Math.round(angle / 45) % 8];
+        const distance = Math.round(Math.hypot(dx, dz));
+
+        ui.waypointReadout.classList.remove("hidden");
+        ui.waypointReadout.textContent = "WP " + dir + " " + distance + "m";
+      } else {
+        ui.waypointReadout.classList.add("hidden");
+      }
+    }
+
+    function angleDifference(a, b) {
+      return (b - a + 540) % 360 - 180;
+    }
+
+    function renderHotbar() {
+      ui.hotbar.innerHTML = "";
+
+      tools.forEach(function (tool, index) {
+        const unlocked = isToolUnlocked(tool.id);
+
+        const slot = document.createElement("div");
+        slot.className = "slot" + (index === player.selectedSlot ? " active" : "");
+        slot.style.opacity = unlocked ? "1" : "0.42";
+
+        slot.innerHTML =
+          "<div class='slotKey'>" +
+          (index + 1) +
+          "</div><div class='slotIcon'>" +
+          tool.icon +
+          "</div><div class='slotName'>" +
+          tool.name +
+          "</div>";
+
+        ui.hotbar.appendChild(slot);
+      });
+
+      const selected = tools[player.selectedSlot];
+
+      if (selected && isToolUnlocked(selected.id)) {
+        setHeldToolModel(selected.id);
+      } else {
+        player.selectedSlot = 0;
+        setHeldToolModel("rock");
+      }
+    }
+
+    function renderInventory() {
+      const data = [
+        ["wood", "Dřevo", "🪵", player.wood],
+        ["stone", "Kámen", "🪨", player.stone],
+        ["metalOre", "Metal ore", "⛓️", player.metalOre],
+        ["sulfurOre", "Sulfur ore", "🟡", player.sulfurOre],
+        ["cloth", "Látka", "🌿", player.cloth],
+        ["scrap", "Scrap", "⚙️", player.scrap],
+        ["lowGradeFuel", "Low grade fuel", "🛢️", player.lowGradeFuel],
+        ["crudeOil", "Crude oil", "🛢️", player.crudeOil],
+        ["animalFat", "Animal fat", "🥩", player.animalFat],
+        ["mushrooms", "Houby", "🍄", player.mushrooms],
+        ["waterBottle", "Water bottle", "💧", player.waterBottle],
+        ["bandage", "Bandage", "🩹", player.bandage]
+      ];
+
+      ui.inventoryGrid.innerHTML = "";
+
+      data.forEach(function (item) {
+        const div = document.createElement("div");
+        div.className = "itemCard";
+
+        div.innerHTML =
+          "<div class='itemIcon'>" +
+          item[2] +
+          "</div><div><strong>" +
+          item[1] +
+          "</strong><span>Množství: " +
+          item[3] +
+          "</span></div>";
+
+        ui.inventoryGrid.appendChild(div);
+      });
+    }
+
+    function renderCrafting() {
+      ui.craftingGrid.innerHTML = "";
+
+      recipes.forEach(function (recipe) {
+        const canCraft = canAfford(recipe.cost);
+
+        const div = document.createElement("div");
+        div.className = "itemCard clickable" + (canCraft ? "" : " disabled");
+
+        div.innerHTML =
+          "<div class='itemIcon'>" +
+          recipe.icon +
+          "</div><div><strong>" +
+          recipe.name +
+          "</strong><span>" +
+          recipe.description +
+          "<br>Potřeba: " +
+          costText(recipe.cost) +
+          "</span></div>";
+
+        div.addEventListener("click", function () {
+          craft(recipe);
+        });
+
+        ui.craftingGrid.appendChild(div);
+      });
+    }
+
+    function renderBuildMenu() {
+      ui.buildGrid.innerHTML = "";
+
+      buildPieces.forEach(function (piece) {
+        const canBuild = canAfford(piece.cost);
+
+        const card = document.createElement("div");
+        card.className =
+          "itemCard clickable" +
+          (buildState.selected === piece.id ? " active" : "") +
+          (canBuild ? "" : " disabled");
+
+        card.innerHTML =
+          "<div class='itemIcon'>" +
+          piece.icon +
+          "</div><div><strong>" +
+          piece.name +
+          "</strong><span>" +
+          piece.description +
+          "<br>Potřeba: " +
+          costText(piece.cost) +
+          "</span></div>";
+
+        card.addEventListener("click", function () {
+          buildState.selected = piece.id;
+          buildState.previewActive = true;
+          renderBuildMenu();
+          showMessage("Vybraný build díl: " + piece.name);
+        });
+
+        ui.buildGrid.appendChild(card);
+      });
+    }
+
+    function renderSettings() {
+      const buttons = {
+        perfLowButton: function () { setPerformance("low"); },
+        perfMediumButton: function () { setPerformance("medium"); },
+        perfHighButton: function () { setPerformance("high"); },
+        scale075Button: function () { setRenderScale(0.75); },
+        scale1Button: function () { setRenderScale(1); },
+        scale125Button: function () { setRenderScale(1.25); },
+        fov70Button: function () { setFov(70); },
+        fov80Button: function () { setFov(80); },
+        fov90Button: function () { setFov(90); },
+        densityLowButton: function () { setDensity("low"); },
+        densityMediumButton: function () { setDensity("medium"); },
+        densityHighButton: function () { setDensity("high"); },
+        shaderButton: function () { toggleSetting("shaders"); },
+        fogButton: function () { toggleSetting("fog"); },
+        shadowButton: function () { toggleSetting("shadows"); },
+        fpsButton: function () { toggleSetting("fps"); },
+        minimapButton: function () { toggleSetting("minimap"); },
+        compassButton: function () { toggleSetting("compass"); },
+        helpButton: function () { toggleSetting("help"); }
+      };
+
+      Object.keys(buttons).forEach(function (id) {
+        const btn = document.getElementById(id);
+
+        if (btn && !btn.dataset.bound) {
+          btn.addEventListener("click", buttons[id]);
+          btn.dataset.bound = "1";
+        }
+      });
+
+      setButton("perfLowButton", settings.performance === "low");
+      setButton("perfMediumButton", settings.performance === "medium");
+      setButton("perfHighButton", settings.performance === "high");
+
+      setButton("scale075Button", settings.renderScale === 0.75);
+      setButton("scale1Button", settings.renderScale === 1);
+      setButton("scale125Button", settings.renderScale === 1.25);
+
+      setButton("fov70Button", settings.fov === 70);
+      setButton("fov80Button", settings.fov === 80);
+      setButton("fov90Button", settings.fov === 90);
+
+      setButton("densityLowButton", settings.density === "low");
+      setButton("densityMediumButton", settings.density === "medium");
+      setButton("densityHighButton", settings.density === "high");
+
+      setButton("shaderButton", settings.shaders, "Efekty: ");
+      setButton("fogButton", settings.fog, "Mlha: ");
+      setButton("shadowButton", settings.shadows, "Stíny: ");
+      setButton("fpsButton", settings.fps, "FPS counter: ");
+      setButton("minimapButton", settings.minimap, "Minimapa: ");
+      setButton("compassButton", settings.compass, "Kompas: ");
+      setButton("helpButton", settings.help, "Help panel: ");
+
+      document.getElementById("menuShadows").textContent = "Stíny: " + (settings.shadows ? "zapnuto" : "vypnuto");
+      document.getElementById("menuFog").textContent = "Mlha: " + (settings.fog ? "zapnuto" : "vypnuto");
+      document.getElementById("menuShaders").textContent = "Efekty: " + (settings.shaders ? "zapnuto" : "vypnuto");
+
+      setButton("menuShadows", settings.shadows);
+      setButton("menuFog", settings.fog);
+      setButton("menuShaders", settings.shaders);
+      setButton("menuCompass", settings.compass);
+      setButton("menuMinimap", settings.minimap);
+      setButton("menuFps", settings.fps);
+      setButton("menuHelp", settings.help);
+      setButton("menuPerfLow", settings.performance === "low");
+      setButton("menuPerfMedium", settings.performance === "medium");
+      setButton("menuPerfHigh", settings.performance === "high");
+      setButton("menuScale075", settings.renderScale === 0.75);
+      setButton("menuScale1", settings.renderScale === 1);
+      setButton("menuScale125", settings.renderScale === 1.25);
+
+      ui.keybindGrid.innerHTML = "";
+
+      Object.keys(keybinds).forEach(function (key) {
+        const row = document.createElement("div");
+        row.className = "bindRow";
+
+        row.innerHTML =
+          "<span>" +
+          keybindLabels[key] +
+          "</span><button class='bindButton'>" +
+          prettyKey(keybinds[key]) +
+          "</button>";
+
+        row.querySelector("button").addEventListener("click", function () {
+          state.waitingForBind = key;
+          ui.bindInfo.textContent = "Stiskni novou klávesu pro: " + keybindLabels[key];
+        });
+
+        ui.keybindGrid.appendChild(row);
+      });
+
+      applySettings();
+    }
+
+    function setButton(id, active, prefix) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+
+      btn.className = "smallButton" + (active ? " active" : "");
+
+      if (prefix) {
+        btn.textContent = prefix + (active ? "zapnuto" : "vypnuto");
+      }
+    }
+
+    function craft(recipe) {
+      if (!canAfford(recipe.cost)) {
+        showMessage("Nemáš dost surovin na: " + recipe.name);
+        return;
+      }
+
+      Object.keys(recipe.cost).forEach(function (key) {
+        player[key] -= recipe.cost[key];
+      });
+
+      recipe.action();
+
+      renderInventory();
+      renderCrafting();
+      renderHotbar();
+      renderBuildMenu();
+    }
+
+    function canAfford(cost) {
+      return Object.keys(cost).every(function (key) {
+        return player[key] >= cost[key];
+      });
+    }
+
+    function setPerformance(mode) {
+      settings.performance = mode;
+
+      if (mode === "low") {
+        settings.shadows = false;
+        settings.fog = false;
+        settings.renderScale = 0.75;
+        settings.density = "low";
+      }
+
+      if (mode === "medium") {
+        settings.shadows = true;
+        settings.fog = true;
+        settings.renderScale = 1;
+        settings.density = "medium";
+      }
+
+      if (mode === "high") {
+        settings.shadows = true;
+        settings.fog = true;
+        settings.renderScale = 1.25;
+        settings.density = "high";
+      }
+
+      if (renderer) renderer.setPixelRatio(getRenderPixelRatio());
+
+      renderSettings();
+      applySettings();
+      showMessage("Performance změněn na: " + mode);
+    }
+
+    function setDensity(mode) {
+      settings.density = mode;
+      renderSettings();
+      showMessage("Density změněna na: " + mode + ". Pro plný rebuild mapy restartuj stránku.");
+    }
+
+    function setRenderScale(value) {
+      settings.renderScale = value;
+      if (renderer) renderer.setPixelRatio(getRenderPixelRatio());
+      renderSettings();
+      showMessage("Render scale: " + value + "x");
+    }
+
+    function setFov(value) {
+      settings.fov = value;
+
+      if (camera) {
+        camera.fov = value;
+        camera.updateProjectionMatrix();
+      }
+
+      renderSettings();
+      showMessage("FOV změněno na: " + value);
+    }
+
+    function toggleSetting(name) {
+      settings[name] = !settings[name];
+      renderSettings();
+      applySettings();
+    }
+
+    function applySettings() {
+      if (!renderer || !scene) return;
+
+      renderer.shadowMap.enabled = settings.shadows;
+
+      if (settings.fog) {
+        scene.fog = new THREE.Fog(0x8fbce8, 130, 720);
+      } else {
+        scene.fog = null;
+      }
+
+      ui.fpsCounter.classList.toggle("hidden", !settings.fps);
+      ui.miniMapPanel.classList.toggle("hidden", !settings.minimap);
+      ui.topCompassWrap.classList.toggle("hidden", !settings.compass);
+      ui.helpPanel.classList.toggle("hidden", !settings.help);
+    }
+
+    function addResourceFeed(text) {
+      const item = document.createElement("div");
+      item.className = "feedItem";
+      item.textContent = text;
+
+      ui.resourceFeed.prepend(item);
+
+      setTimeout(function () {
+        item.remove();
+      }, 2600);
+    }
+
+    function showMessage(text) {
+      ui.centerMessage.textContent = text;
+    }
+
+    function flashHit() {
+      ui.hitMarker.classList.remove("active");
+      void ui.hitMarker.offsetWidth;
+      ui.hitMarker.classList.add("active");
+
+      setTimeout(function () {
+        ui.hitMarker.classList.remove("active");
+      }, 120);
+    }
+
+    function drawMiniMap() {
+      const now = performance.now();
+
+      if (now - state.lastMiniMapDraw < 180) return;
+
+      state.lastMiniMapDraw = now;
+      drawMap(miniMapCtx, ui.miniMapCanvas.width, ui.miniMapCanvas.height, true);
+    }
+
+    function drawBigMap() {
+      drawMap(bigMapCtx, ui.bigMapCanvas.width, ui.bigMapCanvas.height, false);
+    }
+
+    function drawMap(ctx, width, height, small) {
+      ctx.clearRect(0, 0, width, height);
+
+      const center = width / 2;
+      const radius = width * 0.43;
+      const zoom = small ? 1 : state.mapZoom;
+      const scale = (radius / WORLD_RADIUS) * zoom;
+
+      ctx.fillStyle = "#0b1930";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius * zoom, 0, Math.PI * 2);
+      ctx.fillStyle = "#2d6ed0";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius * 0.84 * zoom, 0, Math.PI * 2);
+      ctx.fillStyle = "#497f39";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius * 0.58 * zoom, 0, Math.PI * 2);
+      ctx.fillStyle = "#3e6f33";
+      ctx.fill();
+
+      drawPathOnMap(ctx, roadPoints, center, scale, "#31343a", small ? 2 : 5);
+      drawPathOnMap(ctx, riverPoints, center, scale, "#38bdf8", small ? 3 : 6);
+
+      mapMarkers.slice(0, small ? 220 : mapMarkers.length).forEach(function (marker) {
+        const p = worldToMap(marker.x, marker.z, center, scale);
+
+        ctx.fillStyle = markerColor(marker.kind);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, marker.kind === "monument" ? (small ? 3 : 6) : (small ? 2 : 4), 0, Math.PI * 2);
+        ctx.fill();
+
+        if (!small && marker.kind === "monument") {
+          ctx.fillStyle = "#f5f7fb";
+          ctx.font = "12px Arial";
+          ctx.fillText(marker.label, p.x + 8, p.y + 4);
+        }
+      });
+
+      if (state.waypoint) {
+        const wp = worldToMap(state.waypoint.x, state.waypoint.z, center, scale);
+
+        ctx.strokeStyle = "#ff3b3b";
+        ctx.lineWidth = small ? 2 : 4;
+
+        ctx.beginPath();
+        ctx.moveTo(wp.x - 8, wp.y - 8);
+        ctx.lineTo(wp.x + 8, wp.y + 8);
+        ctx.moveTo(wp.x + 8, wp.y - 8);
+        ctx.lineTo(wp.x - 8, wp.y + 8);
+        ctx.stroke();
+      }
+
+      const playerPoint = worldToMap(player.x, player.z, center, scale);
+
+      ctx.save();
+      ctx.translate(playerPoint.x, playerPoint.y);
+      ctx.rotate(-player.yaw);
+      ctx.fillStyle = "#ffd062";
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(6, 8);
+      ctx.lineTo(0, 5);
+      ctx.lineTo(-6, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPathOnMap(ctx, points, center, scale, color, lineWidth) {
+      if (points.length < 2) return;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+
+      points.forEach(function (point, index) {
+        const p = worldToMap(point.x, point.z, center, scale);
+
+        if (index === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+
+      ctx.stroke();
+    }
+
+    function mapMouseToWorld(event) {
+      const rect = ui.bigMapCanvas.getBoundingClientRect();
+
+      const px = (event.clientX - rect.left) * (ui.bigMapCanvas.width / rect.width);
+      const py = (event.clientY - rect.top) * (ui.bigMapCanvas.height / rect.height);
+
+      const center = ui.bigMapCanvas.width / 2;
+      const radius = ui.bigMapCanvas.width * 0.43;
+      const scale = (radius / WORLD_RADIUS) * state.mapZoom;
+
+      return {
+        x: (px - center) / scale,
+        z: (py - center) / scale
+      };
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!clock || !renderer) return;
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      fpsFrames++;
+      fpsTimer += delta;
+
+      if (fpsTimer >= 0.5) {
+        currentFps = Math.round(fpsFrames / fpsTimer);
+        fpsFrames = 0;
+        fpsTimer = 0;
+      }
+
+      const running =
+        state.started &&
+        !state.paused &&
+        !state.inventoryOpen &&
+        !state.mapOpen &&
+        !state.settingsOpen &&
+        !state.buildOpen &&
+        document.pointerLockElement === document.body;
+
+      if (running) {
+        movePlayer(delta);
+        updateSurvival(delta);
+        updateHazards(delta);
+        updateTemperature(delta);
+        updateDayNight(delta);
+        updateAnimatedObjects(delta);
+      }
+
+      updateCamera();
+      updateTarget();
+      updateHeldTool(delta);
+      updateBuildGhost();
+      updateUI();
+
+      if (settings.minimap) drawMiniMap();
+      if (state.mapOpen) drawBigMap();
+
+      renderer.render(scene, camera);
+    }
+
+    function terrainHeight(x, z) {
+      const dist = Math.sqrt(x * x + z * z);
+      const islandFalloff = Math.max(0, 1 - Math.pow(dist / WORLD_RADIUS, 4));
+
+      const base =
+        Math.sin(x * 0.019) * 1.2 +
+        Math.cos(z * 0.024) * 1.1 +
+        Math.sin((x + z) * 0.014) * 1.25;
+
+      const hill1 = 18 * Math.exp(-((x - 165) * (x - 165) + (z - 160) * (z - 160)) / 4200);
+      const hill2 = 20 * Math.exp(-((x + 205) * (x + 205) + (z - 175) * (z - 175)) / 5000);
+      const hill3 = 16 * Math.exp(-((x - 265) * (x - 265) + (z + 165) * (z + 165)) / 4300);
+      const hill4 = 13 * Math.exp(-((x + 260) * (x + 260) + (z + 55) * (z + 55)) / 3600);
+
+      const riverValley = -2.6 * Math.exp(-Math.pow(x - riverX(z), 2) / 500);
+
+      return (base + hill1 + hill2 + hill3 + hill4 + riverValley) * islandFalloff;
+    }
+
+    function placeOnGround(object, x, z, yOffset) {
+      object.position.set(x, terrainHeight(x, z) + yOffset, z);
+    }
+
+    function randomIslandPoint() {
+      const angle = random(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random()) * (WORLD_RADIUS - 26);
+
+      return {
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius
+      };
+    }
+
+    function riverX(z) {
+      return Math.sin(z * 0.021) * 38 - 18;
+    }
+
+    function isNearWater() {
+      const coast = Math.hypot(player.x, player.z) > WORLD_RADIUS - 24;
+
+      let river = false;
+
+      for (const point of riverPoints) {
+        if (Math.hypot(player.x - point.x, player.z - point.z) < 10) {
+          river = true;
+          break;
+        }
+      }
+
+      return coast || river;
+    }
+
+   function isNearRoadOrWater(x, z) {
+  let nearRiver = false;
+  let nearRoad = false;
+
+  for (const point of riverPoints) {
+    if (Math.hypot(x - point.x, z - point.z) < 20) {
+      nearRiver = true;
+      break;
+    }
+  }
+
+  for (const point of roadPoints) {
+    if (Math.hypot(x - point.x, z - point.z) < 16) {
+      nearRoad = true;
+      break;
+    }
+  }
+
+  const nearCoast = Math.hypot(x, z) > WORLD_RADIUS - 30;
+
+  return nearRiver || nearRoad || nearCoast;
+}
+
+    function terrainSlope(x, z) {
+      const h = terrainHeight(x, z);
+      const hx = terrainHeight(x + 2, z);
+      const hz = terrainHeight(x, z + 2);
+
+      return Math.max(Math.abs(hx - h), Math.abs(hz - h));
+    }
+
+    function isSafeSpawn(x, z) {
+      if (Math.hypot(x, z) > WORLD_RADIUS - 35) return false;
+      if (terrainSlope(x, z) > 1.25) return false;
+      return true;
+    }
+
+    function addCollisionCircle(x, z, r, type, owner) {
+      collisionObjects.push({
+        x: x,
+        z: z,
+        r: r,
+        type: type,
+        owner: owner || null
+      });
+    }
+
+    function removeCollisionCircle(x, z, r) {
+      for (let i = collisionObjects.length - 1; i >= 0; i--) {
+        const item = collisionObjects[i];
+
+        if (
+          Math.abs(item.x - x) < 0.01 &&
+          Math.abs(item.z - z) < 0.01 &&
+          Math.abs(item.r - r) < 0.01
+        ) {
+          collisionObjects.splice(i, 1);
+          return;
+        }
+      }
+    }
+
+    function trackObject(object) {
+      worldObjects.push(object);
+      return object;
+    }
+
+    function clearGroup(group) {
+      while (group.children.length > 0) {
+        group.remove(group.children[0]);
+      }
+    }
+
+    function getWorldPos(object) {
+      const vector = new THREE.Vector3();
+      object.getWorldPosition(vector);
+      return vector;
+    }
+
+    function worldToMap(x, z, center, scale) {
+      return {
+        x: center + x * scale,
+        y: center + z * scale
+      };
+    }
+
+    function rotatePoint(x, z, angle) {
+      return {
+        x: x * Math.cos(angle) - z * Math.sin(angle),
+        z: x * Math.sin(angle) + z * Math.cos(angle)
+      };
+    }
+
+    function markerColor(kind) {
+      const colors = {
+        monument: "#ffffff",
+        build: "#ffd062",
+        road: "#111827",
+        fuel: "#ef4444",
+        water: "#38bdf8",
+        hill: "#86a65a",
+        animal: "#eab308",
+        wood: "#8b5a2b",
+        stone: "#d1d5db",
+        metalOre: "#ff8c3b",
+        sulfurOre: "#ffe45e",
+        loot: "#38bdf8",
+        rareLoot: "#60a5fa",
+        lootCrate: "#38bdf8",
+        cloth: "#22c55e",
+        food: "#ef4444"
+      };
+
+      return colors[kind] || "#ffffff";
+    }
+
+    function resourceName(key) {
+      const names = {
+        wood: "dřevo",
+        stone: "kámen",
+        metalOre: "metal ore",
+        sulfurOre: "sulfur ore",
+        cloth: "látka",
+        scrap: "scrap",
+        lowGradeFuel: "low grade fuel",
+        crudeOil: "crude oil",
+        animalFat: "animal fat",
+        mushrooms: "houby",
+        waterBottle: "water bottle",
+        bandage: "bandage",
+        hunger: "jídlo"
+      };
+
+      return names[key] || key;
+    }
+
+    function resourceIcon(key) {
+      const icons = {
+        wood: "🪵",
+        stone: "🪨",
+        metalOre: "⛓️",
+        sulfurOre: "🟡",
+        cloth: "🌿",
+        scrap: "⚙️",
+        lowGradeFuel: "🛢️",
+        crudeOil: "🛢️",
+        animalFat: "🥩",
+        mushrooms: "🍄",
+        waterBottle: "💧",
+        bandage: "🩹",
+        hunger: "🍗"
+      };
+
+      return icons[key] || "➕";
+    }
+
+    function costText(cost) {
+      return Object.keys(cost)
+        .map(function (key) {
+          return resourceName(key) + " " + cost[key];
+        })
+        .join(", ");
+    }
+
+    function prettyKey(code) {
+      const names = {
+        KeyW: "W",
+        KeyA: "A",
+        KeyS: "S",
+        KeyD: "D",
+        KeyE: "E",
+        KeyH: "H",
+        KeyB: "B",
+        KeyF: "F",
+        KeyR: "R",
+        KeyM: "M",
+        KeyO: "O",
+        Tab: "Tab",
+        ShiftLeft: "Levý Shift",
+        ShiftRight: "Pravý Shift",
+        Space: "Mezerník"
+      };
+
+      if (names[code]) return names[code];
+      if (code.startsWith("Key")) return code.replace("Key", "");
+      if (code.startsWith("Digit")) return code.replace("Digit", "");
+
+      return code;
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(random(min, max + 1));
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function onResize() {
+      if (!camera || !renderer) return;
+
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(getRenderPixelRatio());
+    }
+
+    cacheUI();
+    setupButtons();
+  </script>
+</body>
+</html>
