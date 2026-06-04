@@ -30,4 +30,15 @@ class Trener
             Console.WriteLine(i + ") " + Cichnamoni[i].Jmeno);
         }
     }
+
+    public void ZvysLevel()
+    {
+        Level = Level + 1;
+    }
+
+    public void VypisInfo()
+    {
+        Console.WriteLine("Trener: " + Jmeno);
+        Console.WriteLine("Level: " + Level);
+    }
 }

@@ -11,7 +11,6 @@ class Utok
 
     public void VypisInfo()
     {
-        Console.WriteLine("Utok: " + Nazev);
-        Console.WriteLine("Poskozeni: " + Poskozeni);
+        Console.WriteLine(Nazev + " - poskozeni: " + Poskozeni);
     }
 }

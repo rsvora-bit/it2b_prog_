@@ -2,41 +2,31 @@
 
 ## Stav projektu
 
-Projekt je zatim rozpracovany. Mam pripraveny zakladni navrh trid a chci postupne dodelavat soubojovou logiku.
+Projekt je funkcni konzolova hra v C#.
+Je rozdeleny do trid podle OOP.
 
 ## Hotove casti
 
-- vytvorena trida Utok
-- vytvorena trida Cichnamon
-- vytvorena trida Trener
-- vytvoren zaklad Program.cs
-- zakladni vytvareni objektu
-- pripraveny seznam Cichnamonu u trenera
-- pripraveny zakladni vypis informaci
-
-## Co zatim neni hotove
-
-- kompletni soubojovy system
-- vyber akci v boji
-- ukonceni souboje
-- levelovani trenera
-- lepsi menu
-- vice Cichnamonu
-- vice utoku
-- lepsi vypisy
-
-## Proc to delam takhle
-
-Tak nejdriv chci mit spravne navrzene tridy a objekty.
-Potom budu postupne pridavat metody a souboj.
-
-Projekt nechci delat moc slozite, protoze chci tomu sam rozumet, co kazda trida a metoda dela.
+- trida Utok
+- trida Cichnamon
+- trida Trener
+- Program.cs s hlavnim menu
+- vytvareni utoku
+- vytvareni Cichnamonu
+- vyber Cichnamona
+- souboj proti protivnikovi
+- zakladni utok
+- specialni utok
+- leceni
+- kontrola zdravi
+- konec souboje
+- level trenera po vyhre
 
 ## Tridy
 
 ### Utok
 
-Trida Utok uklada informace o jednom utoku.
+Uklada informace o utoku.
 
 Atributy:
 - Nazev
@@ -47,7 +37,7 @@ Metody:
 
 ### Cichnamon
 
-Trida Cichnamon predstavuje jedno monstrum.
+Predstavuje jedno monstrum.
 
 Atributy:
 - Jmeno
@@ -66,7 +56,7 @@ Metody:
 
 ### Trener
 
-Trida Trener predstavuje hrace.
+Predstavuje hrace.
 
 Atributy:
 - Jmeno
@@ -78,13 +68,19 @@ Metody:
 - PridatCichnamona()
 - VyberCichnamona()
 - VypisCichnamony()
+- ZvysLevel()
+- VypisInfo()
 
-## Co budu delat dal
+## Jak hra funguje
 
-1. Dodelam vyber Cichnamona.
-2. Dodelam jednoduchy souboj.
-3. Pridam zakladni a specialni utok.
-4. Pridam leceni.
-5. Pridam konec souboje.
-6. Pridam level po vyhre.
-7. Upravim vypisy, aby byly prehlednejsi.
+Hrac zada jmeno trenera.
+Potom si vybere jednoho Cichnamona.
+Souperi se vytvori nepratelsky Cichnamon.
+Hrac v souboji vybira akci:
+1. zakladni utok
+2. specialni utok
+3. leceni
+
+Po kazde akci hrace zautoci protivnik.
+Souboj konci, kdyz jeden Cichnamon nema zdravi.
+Kdyz hrac vyhraje, zvysi se mu level.
