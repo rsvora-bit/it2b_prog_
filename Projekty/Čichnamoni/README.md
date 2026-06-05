@@ -80,6 +80,19 @@ Obsahuje:
 - předměty
 - ukládání postupu
 
+## Zdroje
+
+Při tvorbě projektu jsem využil:
+
+- prezentace a materiály z hodin,
+
+- vlastní kódy a cvičení z předchozích hodin,
+
+- poznámky z výuky objektově orientovaného programování (OOP),
+
+- vlastní návrhy a úpravy projektu.
+
 ## Autoři
 
-Roman Svora, Ondřej Sagher , IT2B
+Roman Svora, Ondřej Sagher, 
+## IT2B

@@ -1,4 +1,5 @@
 # Projekt Cichnamoni
+## Autoři : Roman Svora, Ondřej Sagher 
 
 ## Stav projektu
 
