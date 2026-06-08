@@ -117,7 +117,8 @@
       overflow: auto;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 22px;
       padding: 30px;
       min-height: 0;
       scrollbar-color: rgba(214, 162, 58, 0.72) rgba(255,255,255,0.06);
@@ -1102,14 +1103,27 @@
       border-radius: 6px;
       background: rgba(6, 10, 13, 0.94);
       box-shadow: 0 18px 60px rgba(0,0,0,0.48);
+      pointer-events: auto;
     }
 
     .terminalHead {
       display: flex;
+      align-items: center;
       justify-content: space-between;
       gap: 12px;
       color: #9eddf5;
       font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .terminalCloseButton {
+      min-height: 30px;
+      padding: 0 10px;
+      border-color: rgba(109, 199, 239, 0.34);
+      color: #d9f4ff;
+      background: rgba(18, 34, 43, 0.8);
+      font-size: 11px;
       font-weight: 900;
       text-transform: uppercase;
     }
@@ -1127,6 +1141,29 @@
       font-size: 12px;
       line-height: 1.4;
       white-space: pre-wrap;
+    }
+
+    .terminalSuggest {
+      display: grid;
+      gap: 3px;
+      margin: -4px 0 8px;
+      padding: 6px 8px;
+      border: 1px solid rgba(109, 199, 239, 0.22);
+      border-radius: 4px;
+      color: #b7dce8;
+      background: rgba(4, 10, 13, 0.86);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .terminalSuggest div {
+      padding: 3px 5px;
+      border-radius: 3px;
+    }
+
+    .terminalSuggest .active {
+      color: #071014;
+      background: #9eddf5;
     }
 
     #terminalInput {
@@ -1743,13 +1780,6 @@
           <div class="changeLine"><strong>Sandbox</strong><span>Přidané debug příkazy pro změnu dne/noci, počasí, spawn zvířat a vyčištění dropů.</span></div>
         </div>
 
-        <h2 class="sectionTitle">Rychlé nastavení</h2>
-        <div class="changeLog">
-          <div class="changeLine"><strong>FOV</strong><span>Ve hře lze měnit přes settings panel, default je širší survival kamera.</span></div>
-          <div class="changeLine"><strong>HUD</strong><span>Surface audit jde přepnout na basic, FPS zůstává vždy vidět.</span></div>
-          <div class="changeLine"><strong>Preset</strong><span>Performance, High detail, Hard survival a Explorer zůstaly přímo v menu.</span></div>
-        </div>
-
         <h2 class="sectionTitle">Kompletní changelog</h2>
         <div id="fullChangelog" class="changeLog">
           <div class="changeLine"><strong>0.3.6</strong><span>První archivovaný HTML prototyp: základní menu, survival statistiky, jednoduchý svět a test ovládání.</span></div>
@@ -1803,8 +1833,9 @@
       R otočit | M mapa | O settings | 1–6 hotbar | H bandage | G jídlo | ESC pauza
     </div>
     <div id="devTerminal" class="hidden">
-      <div class="terminalHead"><span>PRIVATE DEV TERMINAL</span><span>F10 / ` zavřít</span></div>
+      <div class="terminalHead"><span>PRIVATE DEV TERMINAL</span><button id="terminalCloseButton" class="terminalCloseButton">Zavřít</button></div>
       <div id="terminalLog">help - seznam příkazů</div>
+      <div id="terminalSuggest" class="terminalSuggest hidden"></div>
       <input id="terminalInput" autocomplete="off" spellcheck="false" placeholder="např. god on, fly on, weather storm, time night, spawn wolf 3" />
     </div>
     <div id="hotbar"></div>
@@ -2028,6 +2059,21 @@
     const droppedItems = [];
     const animated = [];
     const terrainSamples = [];
+    const pendingDropQueue = [];
+    const hitMarkerMaterials = {};
+    const cachedGeometries = {};
+    let terminalMatches = [];
+    let terminalSuggestionIndex = -1;
+
+    const terminalCommandBase = [
+      "help", "god on", "god off", "god toggle", "fly on", "fly off", "noclip on",
+      "weather clear", "weather rain", "weather fog", "weather storm",
+      "time dawn", "time day", "time noon", "time evening", "time night", "time midnight",
+      "spawn deer 1", "spawn wolf 1", "spawn boar 1", "spawn barrel 1", "spawn crate 1", "spawn tree 1", "spawn stone 1",
+      "kill animals", "clear drops", "clear animals", "heal", "feed", "drink", "stamina",
+      "resources", "kit", "buildkit", "tp lighthouse", "tp swamp", "tp 0 0", "give wood 100",
+      "fpslimit 60", "fpslimit unlimited", "fov 80", "save"
+    ];
 
     const settings = {
       shadows: true,
@@ -2317,12 +2363,19 @@
     function surfaceLabelAt(x, z) {
       const depth = waterDepthAt(x, z);
       if (getRoadDistance(x, z) < 6.4) return "Silnice";
+      if (isSwampAt(x, z)) return "Bažina";
       if (depth > 1.2) return "Hluboká voda";
       if (depth > 0.28) return "Mělká voda";
       if (nearLakeShore(x, z)) return "Břeh";
       if (Math.hypot(x, z) > WORLD_RADIUS * 0.78) return "Pláž";
       if (terrainHeight(x, z) > 22) return "Hory";
       return "Terén";
+    }
+
+    function isSwampAt(x, z) {
+      return lakes.some(function (lake) {
+        return lake.type === "swamp" && dist2(x, z, lake.x, lake.z) < lake.r + 18;
+      });
     }
 
     function nearLakeShore(x, z) {
@@ -2343,7 +2396,7 @@
         "hpText", "foodText", "waterText", "staminaText", "radText",
         "surfaceReadout", "questReadout", "statusReadout", "targetPanel", "targetName", "targetHint",
         "feed", "centerMessage", "hotbar", "topCompass", "compassLabel", "compassTrack", "hintPanel",
-        "devTerminal", "terminalLog", "terminalInput",
+        "devTerminal", "terminalLog", "terminalInput", "terminalCloseButton", "terminalSuggest",
         "perfPanel", "fpsText", "latencyText",
         "weatherPanel", "weatherIcon", "weatherText", "clockText", "rainOverlay", "nightOverlay",
         "miniMapWrap",
@@ -2534,15 +2587,26 @@
       ui.returnMenuButton.addEventListener("click", returnToMenu);
       ui.deathRespawnButton.addEventListener("click", function () { respawnPlayer(true); });
       ui.deathMenuButton.addEventListener("click", returnToMenu);
+      ui.terminalCloseButton.addEventListener("click", function () {
+        toggleDevTerminal(false);
+      });
+      ui.terminalInput.addEventListener("input", function () {
+        updateTerminalSuggestions(ui.terminalInput.value);
+      });
       ui.terminalInput.addEventListener("keydown", function (event) {
         event.stopPropagation();
         if (event.code === "Enter") {
           event.preventDefault();
           runDevCommand(ui.terminalInput.value);
           ui.terminalInput.value = "";
+          updateTerminalSuggestions("");
         } else if (event.code === "Escape") {
           event.preventDefault();
           toggleDevTerminal(false);
+        } else if (event.code === "ArrowDown" || event.code === "ArrowUp" || event.code === "Tab") {
+          if (applyTerminalSuggestion(event.code === "ArrowUp" ? -1 : 1)) {
+            event.preventDefault();
+          }
         }
       });
 
@@ -2552,6 +2616,7 @@
       });
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mousedown", function (event) {
+        if (ui.devTerminal && ui.devTerminal.contains(event.target)) return;
         if (event.button !== 0 || !state.started || state.paused || state.inMenu) return;
         if (!isPointerLocked()) {
           state.mouseLookFallback = true;
@@ -2648,6 +2713,7 @@
       lakes.push({ x: 84, z: 216, r: 28, depth: 2.2 });
       lakes.push({ x: 278, z: 238, r: 32, depth: 2.4 });
       lakes.push({ x: -356, z: -306, r: 38, depth: 2.7 });
+      lakes.push({ x: -112, z: 318, r: 52, depth: 1.15, type: "swamp" });
 
       roads.push(spline([
         [-368, -104], [-300, -78], [-235, -46], [-158, -14], [-64, 18], [32, 34],
@@ -2670,6 +2736,15 @@
       ], 14));
       roads.push(spline([
         [-316, 270], [-372, 326], [-430, 388], [-456, 438]
+      ], 14));
+      roads.push(spline([
+        [42, -292], [122, -320], [214, -324], [312, -292], [336, -258]
+      ], 14));
+      roads.push(spline([
+        [118, 356], [214, 392], [322, 402], [412, 394]
+      ], 14));
+      roads.push(spline([
+        [-300, -78], [-360, -118], [-404, -28], [-406, 118], [-372, 196], [-316, 270]
       ], 14));
     }
 
@@ -2696,10 +2771,20 @@
       materials.leavesLight = textureMaterial(makeLeafTexture(0x4f7e37, 0x9bbb5e), 1);
       materials.leavesDark = textureMaterial(makeLeafTexture(0x1d3f24, 0x4d7140), 1);
       materials.grassBlade = new THREE.MeshStandardMaterial({ map: makeGrassTexture(), roughness: 1, transparent: true, alphaTest: 0.18, side: THREE.DoubleSide });
+      materials.grassCut = new THREE.MeshStandardMaterial({ color: 0x6f9a46, roughness: 1, side: THREE.DoubleSide });
+      materials.grassTall = new THREE.MeshStandardMaterial({ color: 0x3f7136, roughness: 1, side: THREE.DoubleSide });
       materials.dryGrass = new THREE.MeshStandardMaterial({ color: 0x8b8848, roughness: 1, side: THREE.DoubleSide });
       materials.reed = mat(0x778f48, 0.98);
       materials.hemp = mat(0x67b56b, 0.98);
+      materials.hempStem = mat(0x3f8051, 0.98);
+      materials.hempFlower = mat(0xd8e6c0, 0.96);
+      materials.bush = textureMaterial(makeLeafTexture(0x254f2a, 0x5f8f44), 1);
+      materials.bushLight = textureMaterial(makeLeafTexture(0x3f6f36, 0x8cab5b), 1);
       materials.cloth = mat(0x8a7760, 0.92);
+      materials.mud = mat(0x3b3223, 1);
+      materials.lighthouseWhite = mat(0xd8d4c5, 0.84);
+      materials.lighthouseRed = mat(0x9e342e, 0.78, 0.05);
+      materials.lightBeam = new THREE.MeshBasicMaterial({ color: 0xfff1a8, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false });
       materials.red = textureMaterial(makeBarrelTexture(0xa73b2f, 0x421916), 0.82, 0.08);
       materials.blue = textureMaterial(makeBarrelTexture(0x3e789f, 0x142b3d), 0.78, 0.06);
       materials.yellow = textureMaterial(makeBarrelTexture(0xbf9432, 0x49320f), 0.78, 0.06);
@@ -2733,6 +2818,19 @@
         emissive: 0x032f58,
         emissiveIntensity: 0.23
       });
+      materials.swampWater = new THREE.MeshPhysicalMaterial({
+        map: makeWaterTexture(0x365f3d, 0x94a66d),
+        color: 0x314f37,
+        roughness: 0.42,
+        metalness: 0,
+        clearcoat: 0.18,
+        transparent: true,
+        opacity: 0.86,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        emissive: 0x172c1e,
+        emissiveIntensity: 0.14
+      });
       materials.foam = new THREE.MeshBasicMaterial({ map: makeFoamTexture(), color: 0xe9fbff, transparent: true, opacity: 0.52, side: THREE.DoubleSide, depthWrite: false });
       materials.cloud = new THREE.MeshBasicMaterial({ map: makeCloudTexture(), transparent: true, opacity: 0.84 });
       materials.radiation = new THREE.MeshBasicMaterial({ color: 0x87e44d, transparent: true, opacity: 0.14, side: THREE.DoubleSide });
@@ -2764,6 +2862,22 @@
         roughness: roughness === undefined ? 0.9 : roughness,
         metalness: metalness || 0
       });
+    }
+
+    function cachedGeometry(key, factory) {
+      if (!cachedGeometries[key]) cachedGeometries[key] = factory();
+      return cachedGeometries[key];
+    }
+
+    function hitMarkerMaterial(kind) {
+      if (!hitMarkerMaterials[kind]) {
+        hitMarkerMaterials[kind] = new THREE.SpriteMaterial({
+          map: makeHitMarkerTexture(kind),
+          transparent: true,
+          depthWrite: false
+        });
+      }
+      return hitMarkerMaterials[kind];
     }
 
     function makeTexture(size, painter) {
@@ -3067,6 +3181,8 @@
       createMonuments();
       createResources();
       createGroundDetails();
+      createBoulderFields();
+      createSwampDetails();
       createRoadFurniture();
       createPowerLines();
       createCliffDetails();
@@ -3115,6 +3231,7 @@
         const roadDistance = getRoadDistance(x, z);
         if (roadDistance < 6.2) color.setHex(0x24282b);
         else if (roadDistance < 8.8) color.setHex(0x444039);
+        else if (isSwampAt(x, z)) color.setHex(depth > 0.22 ? 0x304832 : 0x4a4b2f);
         else if (depth > 0.28) color.setHex(depth > 1.2 ? 0x0b5e83 : 0x227b89);
         else if (d > WORLD_RADIUS * 0.77 || nearLakeShore(x, z)) color.setHex(0xb59a63);
         else if (y > 24) color.setHex(0x747b70);
@@ -3137,18 +3254,19 @@
       animated.push({ type: "water", object: ocean, baseOpacity: 0.92 });
 
       lakes.forEach(function (lake) {
-        const water = new THREE.Mesh(new THREE.CircleGeometry(lake.r, 72), materials.water);
+        const waterMaterial = lake.type === "swamp" ? materials.swampWater : materials.water;
+        const water = new THREE.Mesh(new THREE.CircleGeometry(lake.r, 72), waterMaterial);
         water.rotation.x = -Math.PI / 2;
         water.position.set(lake.x, WATER_LEVEL + 0.12, lake.z);
         scene.add(water);
-        animated.push({ type: "water", object: water, baseOpacity: 0.94 });
+        animated.push({ type: "water", object: water, baseOpacity: lake.type === "swamp" ? 0.82 : 0.94 });
 
         const foam = new THREE.Mesh(new THREE.RingGeometry(lake.r * 0.86, lake.r + 1.2, 72), materials.foam);
         foam.rotation.x = -Math.PI / 2;
         foam.position.set(lake.x, WATER_LEVEL + 0.18, lake.z);
         scene.add(foam);
         animated.push({ type: "foam", object: foam });
-        markers.push({ x: lake.x, z: lake.z, kind: "water", label: "Lake" });
+        markers.push({ x: lake.x, z: lake.z, kind: "water", label: lake.type === "swamp" ? "Swamp" : "Lake" });
       });
     }
 
@@ -3215,9 +3333,13 @@
     }
 
     function createMonuments() {
-      markers.push({ x: -174, z: -118, kind: "loot", label: "Old warehouse loot zone" });
-      markers.push({ x: 158, z: 104, kind: "loot", label: "Roadside loot zone" });
-      markers.push({ x: 304, z: 158, kind: "loot", label: "Beach wreck loot zone" });
+      addWarehouse(-174, -118, 0.42);
+      addGasStation(158, 104, -0.55);
+      addHarbor(304, 158, 1.2);
+      addDome(-258, 68);
+      addOutpost(-56, 282, 0.28);
+      addSupermarket(238, -166, -0.72);
+      addLighthouse(-406, 118, 0.16);
     }
 
     function addWarehouse(x, z, rot) {
@@ -3295,6 +3417,52 @@
       addLocalLoot(x, z, rot, 7, 5, "barrel");
     }
 
+    function addLighthouse(x, z, rot) {
+      const g = new THREE.Group();
+      addBox(g, 0, 0, 0, 19, 0.5, 19, materials.stone);
+      addBox(g, 0, 0.48, 0, 10.4, 0.28, 10.4, materials.lighthouseWhite);
+      const wallRadius = 5.15;
+      const segments = 14;
+      const doorAngle = -Math.PI / 2;
+      for (let i = 0; i < segments; i++) {
+        const a = (i / segments) * Math.PI * 2;
+        if (Math.abs(Math.atan2(Math.sin(a - doorAngle), Math.cos(a - doorAngle))) < 0.42) continue;
+        const wallMat = i % 4 < 2 ? materials.lighthouseWhite : materials.lighthouseRed;
+        const wall = addBox(g, Math.cos(a) * wallRadius, 0.76, Math.sin(a) * wallRadius, 2.45, 8.6, 0.42, wallMat);
+        wall.rotation.y = -a;
+        addLocalCollision(x, z, rot, Math.cos(a) * wallRadius, Math.sin(a) * wallRadius, 1.08, 8.9, false, "lighthouseWall");
+      }
+      addBox(g, -2.0, 0.76, -4.35, 1.1, 2.0, 0.42, materials.woodDark);
+      addBox(g, 2.0, 0.76, -4.35, 1.1, 2.0, 0.42, materials.woodDark);
+      for (let i = 0; i < 8; i++) {
+        const a = i * 0.72;
+        const step = addBox(g, Math.cos(a) * 2.2, 1.05 + i * 0.72, Math.sin(a) * 2.2, 2.7, 0.22, 0.95, materials.wood);
+        step.rotation.y = -a;
+        addLocalCollision(x, z, rot, Math.cos(a) * 2.2, Math.sin(a) * 2.2, 1.0, 0.5 + i * 0.72, true, "lighthouseStep");
+      }
+      addBox(g, 0, 6.9, 0, 7.6, 0.35, 7.6, materials.metal);
+      const lantern = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.65, 2.2, 18), materials.yellow);
+      lantern.position.y = 8.8;
+      lantern.castShadow = settings.shadows;
+      g.add(lantern);
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(3.6, 1.4, 18), materials.lighthouseRed);
+      cap.position.y = 10.6;
+      g.add(cap);
+      const beam = new THREE.Mesh(new THREE.ConeGeometry(2.2, 28, 16, 1, true), materials.lightBeam);
+      beam.position.set(0, 8.9, -16);
+      beam.rotation.x = Math.PI / 2;
+      g.add(beam);
+      g.position.set(x, surfaceHeight(x, z) + 0.08, z);
+      g.rotation.y = rot;
+      scene.add(g);
+      monuments.push({ label: "Lighthouse", x, z, rot, radius: 24, radiation: false });
+      markers.push({ x, z, kind: "monument", label: "Lighthouse" });
+      addLocalCollision(x, z, rot, 0, 0, 5.2, 0.55, true, "lighthouseBase");
+      addLocalLoot(x, z, rot, -2.8, 1.8, "barrel");
+      addLocalLoot(x, z, rot, 2.4, 2.6, "fuel");
+      addLocalLoot(x, z, rot, 0.2, -2.1, "crate");
+    }
+
     function addBox(group, x, y, z, w, h, d, material) {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
       mesh.position.set(x, y + h * 0.5, z);
@@ -3331,6 +3499,11 @@
       createLoot(x + p.x, z + p.z, type);
     }
 
+    function addLocalCollision(x, z, rot, lx, lz, r, height, climbable, type) {
+      const p = rotate(lx, lz, rot);
+      collisions.push({ x: x + p.x, z: z + p.z, r, height, climbable, type });
+    }
+
     function createResources() {
       const density = [0.6, 1, 1.32][settings.density] || 1;
       scatterResource("tree", Math.floor(240 * density));
@@ -3338,6 +3511,7 @@
       scatterResource("metal", Math.floor(42 * density));
       scatterResource("sulfur", Math.floor(30 * density));
       scatterResource("hemp", Math.floor(62 * density));
+      scatterResource("bush", Math.floor(52 * density));
       scatterResource("mushroom", Math.floor(46 * density));
       scatterRoadLoot(Math.floor(86 * density));
       scatterBeachLoot(Math.floor(34 * density));
@@ -3571,18 +3745,21 @@
 
       if (type === "tree") {
         const variant = Math.random();
-        label = variant < 0.33 ? "Pine tree" : variant < 0.62 ? "Broadleaf tree" : variant < 0.84 ? "Birch tree" : "Dead tree";
-        hp = 72;
-        radius = 1.45;
-        const trunkMaterial = variant < 0.62 ? materials.woodDark : variant < 0.84 ? materials.birch : materials.wood;
-        const trunkHeight = variant > 0.84 ? rand(4.8, 6.2) : rand(5.6, 8.8);
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(variant < 0.84 ? 0.42 : 0.3, 0.72, trunkHeight, 8), trunkMaterial);
+        const treeScale = variant < 0.2 ? rand(0.62, 0.82) : variant > 0.82 ? rand(1.14, 1.34) : rand(0.9, 1.12);
+        label = variant < 0.2 ? "Young pine" : variant < 0.42 ? "Tall pine" : variant < 0.62 ? "Broadleaf tree" : variant < 0.78 ? "Birch tree" : variant < 0.9 ? "Old oak" : "Dead tree";
+        hp = Math.round(58 + treeScale * 26);
+        radius = 1.15 + treeScale * 0.44;
+        const trunkMaterial = variant < 0.62 ? materials.woodDark : variant < 0.78 ? materials.birch : materials.wood;
+        const trunkHeight = (variant > 0.9 ? rand(4.9, 6.4) : variant < 0.2 ? rand(3.8, 5.3) : rand(6.1, 9.8)) * treeScale;
+        const trunkTop = variant < 0.2 ? 0.28 : variant < 0.9 ? 0.42 : 0.3;
+        const trunkBottom = variant < 0.2 ? 0.5 : variant < 0.9 ? 0.72 : 0.58;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(trunkTop * treeScale, trunkBottom * treeScale, trunkHeight, 8), trunkMaterial);
         trunk.position.y = trunkHeight * 0.5;
         trunk.castShadow = settings.shadows;
         group.add(trunk);
-        if (variant < 0.33) {
+        if (variant < 0.42) {
           for (let i = 0; i < 3; i++) {
-            const crown = new THREE.Mesh(new THREE.ConeGeometry(rand(2.1, 3.7) - i * 0.36, rand(3.8, 5.8), 9), i === 2 ? materials.leavesLight : materials.leaves);
+            const crown = new THREE.Mesh(new THREE.ConeGeometry((rand(2.1, 3.7) - i * 0.36) * treeScale, rand(3.8, 5.8) * treeScale, 9), i === 2 ? materials.leavesLight : materials.leaves);
             crown.position.y = trunkHeight * 0.58 + i * 1.85;
             crown.rotation.y = rand(0, Math.PI);
             crown.castShadow = settings.shadows;
@@ -3590,18 +3767,26 @@
           }
         } else if (variant < 0.62) {
           for (let i = 0; i < 4; i++) {
-            const crown = new THREE.Mesh(new THREE.SphereGeometry(rand(1.7, 2.9), 12, 8), i % 2 ? materials.leavesLight : materials.leaves);
-            crown.position.set(rand(-1.2, 1.2), trunkHeight * 0.72 + rand(0.5, 2.1), rand(-1.2, 1.2));
+            const crown = new THREE.Mesh(new THREE.SphereGeometry(rand(1.7, 2.9) * treeScale, 12, 8), i % 2 ? materials.leavesLight : materials.leaves);
+            crown.position.set(rand(-1.2, 1.2) * treeScale, trunkHeight * 0.72 + rand(0.5, 2.1) * treeScale, rand(-1.2, 1.2) * treeScale);
             crown.scale.y = rand(0.75, 1.25);
             crown.castShadow = settings.shadows;
             group.add(crown);
           }
-        } else if (variant < 0.84) {
-          const crown = new THREE.Mesh(new THREE.SphereGeometry(rand(2.1, 3.1), 12, 8), materials.leavesLight);
+        } else if (variant < 0.78) {
+          const crown = new THREE.Mesh(new THREE.SphereGeometry(rand(2.1, 3.1) * treeScale, 12, 8), materials.leavesLight);
           crown.position.y = trunkHeight + 1.6;
           crown.scale.y = 1.25;
           crown.castShadow = settings.shadows;
           group.add(crown);
+        } else if (variant < 0.9) {
+          for (let i = 0; i < 5; i++) {
+            const crown = new THREE.Mesh(new THREE.SphereGeometry(rand(1.9, 3.4) * treeScale, 12, 8), i % 2 ? materials.leavesDark : materials.leaves);
+            crown.position.set(rand(-1.8, 1.8) * treeScale, trunkHeight * 0.78 + rand(0.2, 1.8) * treeScale, rand(-1.8, 1.8) * treeScale);
+            crown.scale.y = rand(0.62, 0.92);
+            crown.castShadow = settings.shadows;
+            group.add(crown);
+          }
         } else {
           for (let i = 0; i < 4; i++) {
             const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.12, rand(1.4, 2.4), 6), materials.woodDark);
@@ -3610,7 +3795,7 @@
             group.add(branch);
           }
         }
-        loot = { wood: randInt(48, 92) };
+        loot = { wood: randInt(Math.round(42 * treeScale), Math.round(104 * treeScale)) };
       } else if (type === "stone" || type === "metal" || type === "sulfur") {
         label = type === "stone" ? "Stone node" : type === "metal" ? "Metal node" : "Sulfur node";
         hp = type === "stone" ? 58 : 74;
@@ -3628,13 +3813,34 @@
         label = "Hemp";
         hp = 1;
         radius = 0.8;
-        for (let i = 0; i < 6; i++) {
-          const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.12, rand(1.0, 1.6), 0.12), materials.hemp);
-          leaf.position.set(rand(-0.35, 0.35), 0.65, rand(-0.35, 0.35));
-          leaf.rotation.z = rand(-0.35, 0.35);
+        for (let i = 0; i < 7; i++) {
+          const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, rand(1.05, 1.55), 5), materials.hempStem);
+          stem.position.set(rand(-0.28, 0.28), 0.65, rand(-0.28, 0.28));
+          stem.rotation.set(rand(-0.25, 0.25), rand(0, Math.PI), rand(-0.25, 0.25));
+          group.add(stem);
+          const leaf = new THREE.Mesh(new THREE.SphereGeometry(rand(0.13, 0.22), 6, 5), materials.hemp);
+          leaf.position.set(stem.position.x + rand(-0.08, 0.08), rand(0.82, 1.36), stem.position.z + rand(-0.08, 0.08));
+          leaf.scale.set(1.8, 0.22, 0.75);
+          leaf.rotation.y = rand(0, Math.PI);
           group.add(leaf);
         }
+        const blossom = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), materials.hempFlower);
+        blossom.position.y = 1.52;
+        blossom.scale.y = 1.4;
+        group.add(blossom);
         loot = { cloth: randInt(5, 12) };
+      } else if (type === "bush") {
+        label = Math.random() < 0.5 ? "Wild bush" : "Thick shrub";
+        hp = 28;
+        radius = rand(0.95, 1.35);
+        for (let i = 0; i < randInt(3, 5); i++) {
+          const crown = new THREE.Mesh(new THREE.SphereGeometry(rand(0.55, 0.98), 10, 7), i % 2 ? materials.bushLight : materials.bush);
+          crown.position.set(rand(-0.65, 0.65), rand(0.46, 0.95), rand(-0.65, 0.65));
+          crown.scale.y = rand(0.58, 0.92);
+          crown.castShadow = settings.shadows;
+          group.add(crown);
+        }
+        loot = { wood: randInt(8, 20), cloth: randInt(1, 4) };
       } else {
         label = "Mushroom";
         hp = 1;
@@ -3711,6 +3917,8 @@
     function createGroundDetails() {
       const density = [0.55, 1, 1.3][settings.density] || 1;
       createGrassBlades(Math.floor(4100 * density));
+      createCutGrassPatches(Math.floor(1800 * density));
+      createTallGrassPatches(Math.floor(900 * density));
       createDryGrassTufts(Math.floor(980 * density));
       createReeds(Math.floor(320 * density));
       createPebbles(Math.floor(220 * density));
@@ -3732,6 +3940,53 @@
         dummy.rotation.set(rand(-0.12, 0.12), rand(0, Math.PI * 2), rand(-0.18, 0.18));
         const scale = rand(0.55, 1.45);
         dummy.scale.set(scale, scale * rand(0.8, 1.45), scale);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(placed, dummy.matrix);
+        placed++;
+      }
+      mesh.count = placed;
+      scene.add(mesh);
+    }
+
+    function createCutGrassPatches(count) {
+      const geometry = new THREE.PlaneGeometry(0.38, 0.34, 1, 1);
+      geometry.translate(0, 0.17, 0);
+      const mesh = new THREE.InstancedMesh(geometry, materials.grassCut, count);
+      const dummy = new THREE.Object3D();
+      let placed = 0;
+      let tries = 0;
+      while (placed < count && tries < count * 9) {
+        tries++;
+        const p = randomLandPoint(28, WORLD_RADIUS - 36);
+        if (!p || waterDepthAt(p.x, p.z) > 0.05 || getRoadDistance(p.x, p.z) < 6 || terrainHeight(p.x, p.z) > 18 || isSwampAt(p.x, p.z)) continue;
+        dummy.position.set(p.x, terrainHeight(p.x, p.z) + 0.035, p.z);
+        dummy.rotation.set(rand(-0.22, 0.22), rand(0, Math.PI * 2), rand(-0.22, 0.22));
+        const scale = rand(0.5, 1.25);
+        dummy.scale.set(scale, scale * rand(0.55, 0.9), scale);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(placed, dummy.matrix);
+        placed++;
+      }
+      mesh.count = placed;
+      scene.add(mesh);
+    }
+
+    function createTallGrassPatches(count) {
+      const geometry = new THREE.PlaneGeometry(0.34, 1.72, 1, 1);
+      geometry.translate(0, 0.86, 0);
+      const mesh = new THREE.InstancedMesh(geometry, materials.grassTall, count);
+      const dummy = new THREE.Object3D();
+      let placed = 0;
+      let tries = 0;
+      while (placed < count && tries < count * 12) {
+        tries++;
+        const p = randomLandPoint(36, WORLD_RADIUS - 44);
+        if (!p || waterDepthAt(p.x, p.z) > 0.05 || getRoadDistance(p.x, p.z) < 11 || terrainHeight(p.x, p.z) > 16) continue;
+        const swampBoost = isSwampAt(p.x, p.z) ? 1.25 : 1;
+        dummy.position.set(p.x, terrainHeight(p.x, p.z) + 0.04, p.z);
+        dummy.rotation.set(rand(-0.16, 0.16), rand(0, Math.PI * 2), rand(-0.28, 0.28));
+        const scale = rand(0.55, 1.3) * swampBoost;
+        dummy.scale.set(scale, scale * rand(0.85, 1.55), scale);
         dummy.updateMatrix();
         mesh.setMatrixAt(placed, dummy.matrix);
         placed++;
@@ -4087,6 +4342,72 @@
         scene.add(group);
         collisions.push({ x: p.x, z: p.z, r: rand(1.6, 3.4), height: rand(1.1, 2.6), climbable: true, type: "decorRock" });
       }
+    }
+
+    function createBoulderFields() {
+      for (let i = 0; i < 34; i++) {
+        const p = randomLandPoint(60, WORLD_RADIUS - 72);
+        if (!p || waterDepthAt(p.x, p.z) > 0.05 || getRoadDistance(p.x, p.z) < 18 || terrainHeight(p.x, p.z) > 23) continue;
+        if (monuments.some(function (m) { return dist2(p.x, p.z, m.x, m.z) < m.radius + 22; })) continue;
+        const group = new THREE.Group();
+        const pieces = randInt(2, 4);
+        let maxHeight = 0.9;
+        let maxRadius = 1.4;
+        for (let j = 0; j < pieces; j++) {
+          const size = rand(0.9, 2.6);
+          const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(size, 0), materials.stone);
+          rock.position.set(rand(-2.4, 2.4), size * rand(0.35, 0.58), rand(-2.4, 2.4));
+          rock.rotation.set(rand(0, Math.PI), rand(0, Math.PI), rand(0, Math.PI));
+          rock.scale.y = rand(0.62, 1.28);
+          rock.castShadow = settings.shadows;
+          group.add(rock);
+          maxHeight = Math.max(maxHeight, rock.position.y + size * rock.scale.y * 0.5);
+          maxRadius = Math.max(maxRadius, Math.hypot(rock.position.x, rock.position.z) + size * 0.72);
+        }
+        group.position.set(p.x, surfaceHeight(p.x, p.z), p.z);
+        group.rotation.y = rand(0, Math.PI * 2);
+        scene.add(group);
+        collisions.push({ x: p.x, z: p.z, r: maxRadius, height: maxHeight, climbable: true, type: "boulderField" });
+        if (i % 7 === 0) markers.push({ x: p.x, z: p.z, kind: "resource", label: "Boulder field" });
+      }
+    }
+
+    function createSwampDetails() {
+      lakes.filter(function (lake) { return lake.type === "swamp"; }).forEach(function (lake) {
+        markers.push({ x: lake.x, z: lake.z, kind: "water", label: "Swamp" });
+        for (let i = 0; i < 54; i++) {
+          const angle = rand(0, Math.PI * 2);
+          const r = rand(lake.r * 0.62, lake.r + 18);
+          const x = lake.x + Math.cos(angle) * r;
+          const z = lake.z + Math.sin(angle) * r;
+          if (getRoadDistance(x, z) < 8) continue;
+          const group = new THREE.Group();
+          const roll = Math.random();
+          if (roll < 0.34) {
+            const mud = new THREE.Mesh(new THREE.CircleGeometry(rand(1.3, 3.4), 16), materials.mud);
+            mud.rotation.x = -Math.PI / 2;
+            mud.position.y = 0.035;
+            group.add(mud);
+          } else if (roll < 0.68) {
+            const stump = new THREE.Mesh(new THREE.CylinderGeometry(rand(0.18, 0.38), rand(0.32, 0.56), rand(0.8, 1.9), 7), materials.woodDark);
+            stump.position.y = 0.5;
+            stump.rotation.set(rand(-0.18, 0.18), rand(0, Math.PI), rand(-0.18, 0.18));
+            stump.castShadow = settings.shadows;
+            group.add(stump);
+            collisions.push({ x, z, r: 0.78, height: 0.95, climbable: true, type: "swampStump" });
+          } else {
+            for (let j = 0; j < 4; j++) {
+              const reed = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, rand(1.5, 2.6), 5), materials.reed);
+              reed.position.set(rand(-0.42, 0.42), rand(0.85, 1.2), rand(-0.42, 0.42));
+              reed.rotation.set(rand(-0.2, 0.2), rand(0, Math.PI), rand(-0.2, 0.2));
+              group.add(reed);
+            }
+          }
+          group.position.set(x, surfaceHeight(x, z) + 0.03, z);
+          group.rotation.y = rand(0, Math.PI * 2);
+          scene.add(group);
+        }
+      });
     }
 
     function createBeachDetails() {
@@ -4539,22 +4860,73 @@
       state.devTerminalOpen = open;
       ui.devTerminal.classList.toggle("hidden", !open);
       if (open) {
-        state.paused = true;
+        clearMovementKeys();
         document.exitPointerLock?.();
         ui.terminalInput.focus();
-        devLog("help | god on/off | fly on/off | weather clear/rain/fog/storm | time day/night/noon/midnight/0-24 | spawn deer/wolf/boar [count] | kill animals | give item amount | clear drops");
+        updateTerminalSuggestions(ui.terminalInput.value);
+        devLog("help | god/fly | weather | time | spawn | give | heal/feed/drink | resources | tp lighthouse/swamp");
       } else {
+        updateTerminalSuggestions("");
         ui.terminalInput.blur();
         if (!isAnyPanelOpen() && !state.dead && !state.inMenu) {
-          state.paused = false;
           requestPointerLockSoon();
         }
       }
     }
 
+    function clearMovementKeys() {
+      Object.keys(keys).forEach(function (key) { keys[key] = false; });
+      state.mouseLookFallback = false;
+    }
+
     function devLog(text) {
       ui.terminalLog.textContent = (ui.terminalLog.textContent + "\n> " + text).split("\n").slice(-12).join("\n");
       ui.terminalLog.scrollTop = ui.terminalLog.scrollHeight;
+    }
+
+    function terminalCommandList() {
+      const itemCommands = Object.keys(itemInfo).map(function (key) {
+        return "give " + key + " 1";
+      });
+      return terminalCommandBase.concat(itemCommands);
+    }
+
+    function updateTerminalSuggestions(value) {
+      if (!ui.terminalSuggest) return;
+      const input = String(value || "").trim().toLowerCase();
+      if (!input) {
+        terminalMatches = [];
+        terminalSuggestionIndex = -1;
+        ui.terminalSuggest.classList.add("hidden");
+        ui.terminalSuggest.innerHTML = "";
+        return;
+      }
+      terminalMatches = terminalCommandList().filter(function (command) {
+        return command.toLowerCase().startsWith(input);
+      }).slice(0, 6);
+      terminalSuggestionIndex = -1;
+      renderTerminalSuggestions();
+    }
+
+    function renderTerminalSuggestions() {
+      if (!terminalMatches.length) {
+        ui.terminalSuggest.classList.add("hidden");
+        ui.terminalSuggest.innerHTML = "";
+        return;
+      }
+      ui.terminalSuggest.classList.remove("hidden");
+      ui.terminalSuggest.innerHTML = terminalMatches.map(function (command, index) {
+        return "<div class='" + (index === terminalSuggestionIndex ? "active" : "") + "'>" + command + "</div>";
+      }).join("");
+    }
+
+    function applyTerminalSuggestion(direction) {
+      if (!terminalMatches.length) updateTerminalSuggestions(ui.terminalInput.value);
+      if (!terminalMatches.length) return false;
+      terminalSuggestionIndex = (terminalSuggestionIndex + direction + terminalMatches.length) % terminalMatches.length;
+      ui.terminalInput.value = terminalMatches[terminalSuggestionIndex];
+      renderTerminalSuggestions();
+      return true;
     }
 
     function runDevCommand(raw) {
@@ -4565,7 +4937,7 @@
       const arg = (parts[1] || "").toLowerCase();
       const amount = clamp(parseInt(parts[2] || parts[1] || "1", 10) || 1, 1, 80);
       if (cmd === "help") {
-      devLog("commands: god, fly, weather, time, spawn, kill animals, give, tp, clear drops, luck, fpslimit");
+        devLog("commands: god, fly, weather, time, spawn, kill/clear, give, tp, heal, feed, drink, stamina, resources, kit, buildkit, fov, fpslimit, save");
       } else if (cmd === "god") {
         state.godMode = arg === "off" ? false : arg === "toggle" ? !state.godMode : true;
         if (state.godMode) {
@@ -4586,11 +4958,23 @@
         setWeatherCommand(arg || "clear");
       } else if (cmd === "time") {
         setTimeCommand(parts[1] || "noon");
+      } else if (["day", "night", "noon", "midnight", "dawn", "evening"].includes(cmd)) {
+        setTimeCommand(cmd);
       } else if (cmd === "spawn") {
-        const type = ["deer", "wolf", "boar"].includes(arg) ? arg : "deer";
-        for (let i = 0; i < amount; i++) spawnAnimalNearPlayer(type);
-        devLog("spawned " + amount + "x " + type);
-      } else if (cmd === "kill" && arg === "animals") {
+        const type = arg || "deer";
+        if (["deer", "wolf", "boar"].includes(type)) {
+          for (let i = 0; i < amount; i++) spawnAnimalNearPlayer(type);
+          devLog("spawned " + amount + "x " + type);
+        } else if (["barrel", "fuel", "oil", "crate", "rare", "military"].includes(type)) {
+          for (let i = 0; i < amount; i++) spawnLootNearPlayer(type);
+          devLog("spawned " + amount + "x " + type);
+        } else if (["tree", "stone", "metal", "sulfur", "hemp", "mushroom", "bush"].includes(type)) {
+          for (let i = 0; i < amount; i++) spawnResourceNearPlayer(type);
+          devLog("spawned " + amount + "x " + type);
+        } else {
+          devLog("usage: spawn deer/wolf/boar/barrel/crate/tree/stone/metal/sulfur/hemp/bush [count]");
+        }
+      } else if ((cmd === "kill" || cmd === "clear") && arg === "animals") {
         killAllAnimals();
         devLog("animals killed");
       } else if (cmd === "give") {
@@ -4603,8 +4987,15 @@
           devLog("given " + id + " x" + count);
         }
       } else if (cmd === "tp") {
-        const x = Number(parts[1]);
-        const z = Number(parts[2]);
+        let x = Number(parts[1]);
+        let z = Number(parts[2]);
+        if (arg === "lighthouse") {
+          x = -406;
+          z = 118;
+        } else if (arg === "swamp" || arg === "bazina") {
+          x = -112;
+          z = 318;
+        }
         if (Number.isFinite(x) && Number.isFinite(z)) {
           placePlayer(x, z);
           devLog("teleported " + Math.round(x) + " " + Math.round(z));
@@ -4612,6 +5003,40 @@
       } else if (cmd === "clear" && arg === "drops") {
         clearDroppedItems();
         devLog("drops cleared");
+      } else if (cmd === "cleardrops") {
+        clearDroppedItems();
+        devLog("drops cleared");
+      } else if (cmd === "heal") {
+        const value = clamp(parseInt(parts[1] || "100", 10) || 100, 1, 100);
+        player.health = clamp(player.health + value, 0, 100);
+        player.bleeding = 0;
+        devLog("health " + Math.round(player.health));
+      } else if (cmd === "feed") {
+        player.hunger = 100;
+        devLog("hunger 100");
+      } else if (cmd === "drink") {
+        player.thirst = 100;
+        devLog("thirst 100");
+      } else if (cmd === "stamina") {
+        player.stamina = 100;
+        devLog("stamina 100");
+      } else if (cmd === "resources") {
+        addInventoryBundle({ wood: 1000, stone: 1000, metalFragments: 500, cloth: 200, scrap: 250 });
+        devLog("resources added");
+      } else if (cmd === "kit") {
+        addInventoryBundle({ wood: 450, stone: 350, cloth: 80, bandage: 4, cookedMeat: 4, waterBottle: 2, scrap: 80 });
+        devLog("survival kit added");
+      } else if (cmd === "buildkit") {
+        addInventoryBundle({ wood: 2200, stone: 1500, metalFragments: 650, cloth: 120, buildingPlan: 1, storageBox: 2 });
+        devLog("build kit added");
+      } else if (cmd === "fov") {
+        const fov = clamp(Number(parts[1]) || settings.fov, 62, 96);
+        settings.fov = fov;
+        syncSettingsUi();
+        devLog("fov " + Math.round(fov));
+      } else if (cmd === "save") {
+        saveGame();
+        devLog("saved");
       } else if (cmd === "luck" || cmd === "hodnestesti" || cmd === "stesti") {
         player.inventory.scrap = (player.inventory.scrap || 0) + 500;
         player.inventory.metalFragments = (player.inventory.metalFragments || 0) + 500;
@@ -4624,6 +5049,34 @@
         devLog("unknown command: " + input);
       }
       updateUi();
+    }
+
+    function addInventoryBundle(bundle) {
+      Object.keys(bundle).forEach(function (key) {
+        player.inventory[key] = (player.inventory[key] || 0) + bundle[key];
+      });
+      renderAllUi();
+    }
+
+    function spawnLootNearPlayer(type) {
+      const p = pointInFrontOfPlayer(rand(6, 10), rand(-4, 4));
+      if (Math.hypot(p.x, p.z) < WORLD_RADIUS - 12 && waterDepthAt(p.x, p.z) < 0.18) createLoot(p.x, p.z, type);
+    }
+
+    function spawnResourceNearPlayer(type) {
+      const p = pointInFrontOfPlayer(rand(7, 12), rand(-5, 5));
+      if (Math.hypot(p.x, p.z) < WORLD_RADIUS - 12 && waterDepthAt(p.x, p.z) < 0.18) createResource(p.x, p.z, type);
+    }
+
+    function pointInFrontOfPlayer(distance, side) {
+      const forwardX = -Math.sin(player.yaw);
+      const forwardZ = -Math.cos(player.yaw);
+      const sideX = Math.cos(player.yaw);
+      const sideZ = -Math.sin(player.yaw);
+      return {
+        x: player.x + forwardX * distance + sideX * side,
+        z: player.z + forwardZ * distance + sideZ * side
+      };
     }
 
     function setWeatherCommand(weather) {
@@ -5024,6 +5477,7 @@
     }
 
     function updateAnimations(dt) {
+      processPendingDrops(2);
       animated.forEach(function (entry) {
         if (entry.type === "water") {
           const material = entry.object.material;
@@ -5101,10 +5555,13 @@
         const dx = item.x - player.x;
         const dz = item.z - player.z;
         const d = Math.hypot(dx, dz);
-        if (d > 11) return;
-        const dot = (dx / d) * forward.x + (dz / d) * forward.z;
-        if (dot < 0.84) return;
-        const score = d - dot * 4;
+        const radius = item.radius || 1;
+        const range = item.action === "dropped" || item.action === "pickup" ? 5.6 : item.action === "loot" ? 6.2 : 10.8;
+        if (d > range + radius) return;
+        const dot = d < 0.001 ? 1 : (dx / d) * forward.x + (dz / d) * forward.z;
+        const veryClose = d < radius + 2.1;
+        if (!veryClose && dot < 0.78) return;
+        const score = veryClose ? d * 0.42 : d - dot * 4;
         if (score < bestScore) {
           bestScore = score;
           best = item;
@@ -5148,12 +5605,7 @@
 
     function showHarvestMarker(target) {
       const kind = target.type === "tree" ? "tree" : "ore";
-      const material = new THREE.SpriteMaterial({
-        map: makeHitMarkerTexture(kind),
-        transparent: true,
-        depthWrite: false
-      });
-      const sprite = new THREE.Sprite(material);
+      const sprite = new THREE.Sprite(hitMarkerMaterial(kind));
       const angle = rand(0, Math.PI * 2);
       const offset = target.type === "tree" ? rand(0.25, 0.65) : rand(0.1, 0.4);
       const y = surfaceHeight(target.x, target.z) + (target.type === "tree" ? rand(2.4, 5.8) : rand(1.0, 1.8));
@@ -5162,8 +5614,6 @@
       scene.add(sprite);
       setTimeout(function () {
         scene.remove(sprite);
-        material.map?.dispose?.();
-        material.dispose();
       }, 520);
     }
 
@@ -5208,8 +5658,19 @@
         const distance = rand(1.1, 2.8);
         const x = target.x + Math.cos(angle) * distance;
         const z = target.z + Math.sin(angle) * distance;
-        createDroppedItem(key, target.loot[key], x, z, "barrel");
+        queueDroppedItem(key, target.loot[key], x, z, "barrel");
       });
+    }
+
+    function queueDroppedItem(key, amount, x, z, source) {
+      pendingDropQueue.push({ key, amount, x, z, source });
+    }
+
+    function processPendingDrops(limit) {
+      for (let i = 0; i < limit && pendingDropQueue.length; i++) {
+        const drop = pendingDropQueue.shift();
+        createDroppedItem(drop.key, drop.amount, drop.x, drop.z, drop.source);
+      }
     }
 
     function createDroppedItem(key, amount, x, z, source) {
@@ -5242,32 +5703,43 @@
       const group = new THREE.Group();
       const baseMaterial = dropMaterialForItem(key);
       if (key === "wood") {
-        addBox(group, -0.24, 0.06, 0, 0.82, 0.16, 0.18, materials.wood);
-        addBox(group, 0.24, 0.18, 0.05, 0.82, 0.16, 0.18, materials.woodDark);
+        addDropBox(group, -0.24, 0.06, 0, 0.82, 0.16, 0.18, materials.wood);
+        addDropBox(group, 0.24, 0.18, 0.05, 0.82, 0.16, 0.18, materials.woodDark);
       } else if (key === "stone" || key === "metalOre" || key === "sulfurOre" || key === "rock") {
         for (let i = 0; i < 2; i++) {
-          const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28 + i * 0.07, 0), baseMaterial);
+          const rock = new THREE.Mesh(cachedGeometry("dropRock", function () { return new THREE.DodecahedronGeometry(1, 0); }), baseMaterial);
           rock.position.set(i * 0.34 - 0.14, 0.28, rand(-0.12, 0.16));
           rock.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
+          rock.scale.setScalar(0.28 + i * 0.07);
           rock.castShadow = settings.shadows;
           group.add(rock);
         }
       } else if (key === "lowGradeFuel" || key === "waterBottle") {
-        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.68, 10), baseMaterial);
+        const bottle = new THREE.Mesh(cachedGeometry("dropBottle", function () { return new THREE.CylinderGeometry(0.16, 0.19, 0.68, 10); }), baseMaterial);
         bottle.position.y = 0.34;
         bottle.rotation.z = rand(-0.6, 0.6);
         bottle.castShadow = settings.shadows;
         group.add(bottle);
       } else {
-        addBox(group, 0, 0.04, 0, 0.74, 0.28, 0.55, baseMaterial);
-        addBox(group, 0, 0.34, 0, 0.52, 0.14, 0.38, materials.cloth);
+        addDropBox(group, 0, 0.04, 0, 0.74, 0.28, 0.55, baseMaterial);
+        addDropBox(group, 0, 0.34, 0, 0.52, 0.14, 0.38, materials.cloth);
       }
-      const glow = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.58, 18), materials.dropGlow);
+      const glow = new THREE.Mesh(cachedGeometry("dropGlowRing", function () { return new THREE.RingGeometry(0.42, 0.58, 18); }), materials.dropGlow);
       glow.rotation.x = -Math.PI / 2;
       glow.position.y = 0.03;
       group.add(glow);
       group.scale.setScalar(clamp(0.86 + Math.log(amount + 1) * 0.06, 0.86, 1.28));
       return group;
+    }
+
+    function addDropBox(group, x, y, z, w, h, d, material) {
+      const mesh = new THREE.Mesh(cachedGeometry("dropUnitBox", function () { return new THREE.BoxGeometry(1, 1, 1); }), material);
+      mesh.position.set(x, y + h * 0.5, z);
+      mesh.scale.set(w, h, d);
+      mesh.castShadow = settings.shadows;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+      return mesh;
     }
 
     function dropMaterialForItem(key) {
@@ -5306,6 +5778,7 @@
     }
 
     function clearDroppedItems() {
+      pendingDropQueue.length = 0;
       for (let i = droppedItems.length - 1; i >= 0; i--) removeDroppedItem(droppedItems[i]);
     }
 
@@ -5610,7 +6083,7 @@
       ui.statusReadout.textContent = status.length ? "Status: " + status.join(" | ") : "Status: OK";
       updateCompass();
       const now = performance.now();
-      if (now - lastMiniMapDraw > 55) {
+      if (now - lastMiniMapDraw > 90) {
         drawMiniMap(false);
         lastMiniMapDraw = now;
       }
@@ -5964,7 +6437,7 @@
       ctx.clip();
       ctx.fillStyle = "#07111d";
       ctx.fillRect(0, 0, size, size);
-      const step = 10;
+      const step = 6;
       for (let z = -range; z <= range; z += step) {
         for (let x = -range; x <= range; x += step) {
           const wx = player.x + x;
@@ -5972,9 +6445,17 @@
           const p = localToMiniMap(wx, wz, center, scale);
           if ((p.x - center) ** 2 + (p.y - center) ** 2 > radius ** 2) continue;
           ctx.fillStyle = terrainMapColor(wx, wz);
-          ctx.fillRect(p.x - 3.8, p.y - 3.8, 8.2, 8.2);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4.6, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
+      const shade = ctx.createRadialGradient(center, center, radius * 0.18, center, center, radius);
+      shade.addColorStop(0, "rgba(255,255,255,0.08)");
+      shade.addColorStop(0.72, "rgba(0,0,0,0)");
+      shade.addColorStop(1, "rgba(0,0,0,0.32)");
+      ctx.fillStyle = shade;
+      ctx.fillRect(center - radius, center - radius, radius * 2, radius * 2);
       lakes.forEach(function (lake) {
         const p = localToMiniMap(lake.x, lake.z, center, scale);
         ctx.fillStyle = "rgba(29,157,212,0.84)";
@@ -6034,6 +6515,7 @@
       if (getRoadDistance(x, z) < 7.4) return "#20262b";
       const depth = waterDepthAt(x, z);
       const h = terrainHeight(x, z);
+      if (isSwampAt(x, z)) return depth > 0.22 ? "#304832" : "#555135";
       if (depth > 1.2 || d > WORLD_RADIUS * 0.84) return "#126f9d";
       if (depth > 0.28) return "#1d9dd4";
       if (d > WORLD_RADIUS * 0.77 || nearLakeShore(x, z)) return "#c9ae73";
