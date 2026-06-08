@@ -1,0 +1,5588 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Farken’s World – Beta 0.7.0</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+  <style>
+    :root {
+      --bg: #070b10;
+      --panel: rgba(11, 16, 23, 0.92);
+      --panel-2: rgba(15, 22, 31, 0.94);
+      --line: rgba(209, 221, 235, 0.14);
+      --line-strong: rgba(229, 238, 249, 0.26);
+      --text: #edf4f9;
+      --muted: #a8b5c2;
+      --soft: #7f8fa1;
+      --accent: #d8a63f;
+      --accent-2: #78b6dd;
+      --danger: #ef5b48;
+      --ok: #75c878;
+      --water: #4fb7e8;
+      --shadow: 0 20px 70px rgba(0, 0, 0, 0.42);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      letter-spacing: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      background: rgba(19, 28, 40, 0.9);
+      border-radius: 7px;
+      min-height: 38px;
+      padding: 0 14px;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(245, 197, 92, 0.75);
+      background: rgba(31, 42, 56, 0.95);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background:
+        linear-gradient(90deg, rgba(3, 8, 12, 0.94), rgba(7, 12, 17, 0.78) 52%, rgba(8, 14, 19, 0.9)),
+        radial-gradient(circle at 68% 36%, rgba(117, 155, 114, 0.18), transparent 34%),
+        #070b10;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 28px;
+    }
+
+    .menuStage {
+      width: min(1240px, 100%);
+      display: grid;
+      grid-template-columns: minmax(420px, 1.05fr) minmax(360px, 0.95fr);
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .menuHero,
+    .menuPanel,
+    .panel,
+    .pauseBox {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .menuHero {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 30px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .menuHero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.46)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 60px);
+      opacity: 0.75;
+    }
+
+    .menuHero > * {
+      position: relative;
+    }
+
+    .kicker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 18px;
+    }
+
+    .kicker::before {
+      content: "";
+      width: 28px;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(40px, 6vw, 86px);
+      line-height: 0.94;
+      letter-spacing: 0;
+      max-width: 780px;
+    }
+
+    .subtitle {
+      margin-top: 18px;
+      max-width: 640px;
+      color: #d7e0e8;
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .wipeStrip {
+      margin-top: 26px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .wipeStat {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.035);
+      border-radius: 7px;
+      padding: 11px;
+      min-height: 72px;
+    }
+
+    .wipeStat strong {
+      display: block;
+      font-size: 20px;
+      color: #fff3cc;
+    }
+
+    .wipeStat span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .menuPanel {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .mainButton {
+      min-height: 54px;
+      background: linear-gradient(180deg, #dcb256, #8f6123);
+      border-color: rgba(255, 232, 151, 0.65);
+      color: #171106;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .smallRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .sectionTitle {
+      margin: 8px 0 0;
+      color: #fff;
+      font-size: 13px;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .menuControls,
+    .changeLog {
+      display: grid;
+      gap: 8px;
+    }
+
+    .controlLine,
+    .changeLine {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 10px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 40px;
+    }
+
+    .controlLine strong,
+    .changeLine strong {
+      color: #f5d894;
+      font-size: 12px;
+    }
+
+    .changeLog {
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    #gameHud {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      transform: translate(-50%, -50%);
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,0.86);
+      box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    }
+
+    #crosshair::before {
+      left: 7px;
+      top: 1px;
+      width: 2px;
+      height: 14px;
+    }
+
+    #crosshair::after {
+      left: 1px;
+      top: 7px;
+      width: 14px;
+      height: 2px;
+    }
+
+    .hudPanel {
+      position: fixed;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      pointer-events: auto;
+    }
+
+    #statsPanel {
+      right: 18px;
+      bottom: 18px;
+      width: 318px;
+      padding: 13px;
+      pointer-events: none;
+    }
+
+    .statLine {
+      display: grid;
+      grid-template-columns: 30px 1fr 42px;
+      align-items: center;
+      gap: 9px;
+      height: 30px;
+      font-size: 13px;
+    }
+
+    .bar {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar > div {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      transition: width 0.12s linear;
+    }
+
+    #surfaceReadout {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #statusReadout {
+      margin-top: 4px;
+      color: #f8dd9d;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    #hotbar {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: repeat(6, 76px);
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .slot {
+      height: 76px;
+      border: 1px solid var(--line);
+      background: rgba(10, 15, 22, 0.86);
+      border-radius: 8px;
+      display: grid;
+      grid-template-rows: 18px 1fr 18px;
+      align-items: center;
+      justify-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+    }
+
+    .slot.active {
+      border-color: rgba(246, 197, 89, 0.9);
+      background: rgba(34, 28, 18, 0.9);
+      color: #fff5d1;
+    }
+
+    .slotIcon {
+      font-size: 25px;
+      line-height: 1;
+    }
+
+    #topCompass {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(620px, calc(100vw - 36px));
+      height: 54px;
+      border-radius: 8px;
+      background: rgba(8, 14, 22, 0.86);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    #compassLabel {
+      position: absolute;
+      left: 50%;
+      top: 7px;
+      transform: translateX(-50%);
+      color: #f7d46d;
+      font-weight: 900;
+      font-size: 13px;
+      z-index: 2;
+    }
+
+    #compassTrack {
+      position: absolute;
+      left: 50%;
+      bottom: 6px;
+      width: 2160px;
+      height: 32px;
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      transition: transform 0.06s linear;
+    }
+
+    .mark {
+      width: 60px;
+      color: rgba(221, 232, 242, 0.55);
+      font-size: 11px;
+      text-align: center;
+      position: relative;
+      height: 28px;
+    }
+
+    .mark::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 1px;
+      height: 9px;
+      background: rgba(221, 232, 242, 0.45);
+    }
+
+    .mark.big {
+      color: #f4f8ff;
+      font-weight: 800;
+    }
+
+    .mark.big::after {
+      height: 17px;
+      background: rgba(246, 197, 89, 0.8);
+    }
+
+    #miniMapWrap {
+      top: 18px;
+      right: 18px;
+      padding: 8px;
+      pointer-events: none;
+    }
+
+    #miniMapCanvas {
+      width: 152px;
+      height: 152px;
+      border-radius: 7px;
+      display: block;
+      background: #07111d;
+    }
+
+    #targetPanel {
+      left: 50%;
+      top: calc(50% + 34px);
+      transform: translateX(-50%);
+      min-width: 260px;
+      padding: 10px 12px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    #targetName {
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    #targetHint {
+      color: var(--muted);
+      margin-top: 3px;
+      font-size: 12px;
+    }
+
+    #feed {
+      position: fixed;
+      left: 18px;
+      bottom: 116px;
+      display: grid;
+      gap: 6px;
+      width: 300px;
+      pointer-events: none;
+    }
+
+    .feedItem {
+      padding: 8px 10px;
+      border-radius: 7px;
+      background: rgba(10,15,22,0.86);
+      border: 1px solid var(--line);
+      color: #e7edf2;
+      font-size: 13px;
+      animation: feedIn 0.18s ease;
+    }
+
+    @keyframes feedIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #centerMessage {
+      position: fixed;
+      left: 50%;
+      bottom: 124px;
+      transform: translateX(-50%);
+      background: rgba(8,14,22,0.9);
+      border: 1px solid var(--line);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      pointer-events: none;
+      box-shadow: var(--shadow);
+    }
+
+    #hintPanel {
+      left: 18px;
+      bottom: 18px;
+      max-width: 390px;
+      padding: 12px;
+      color: #c4d0db;
+      line-height: 1.48;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .panelOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    .panel {
+      width: min(1180px, 100%);
+      max-height: min(780px, calc(100vh - 44px));
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .panelHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panelHead h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .panelBody {
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .inventoryGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+      gap: 8px;
+    }
+
+    .itemTile,
+    .recipeTile,
+    .buildTile,
+    .settingTile {
+      min-height: 90px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.035);
+      border-radius: 7px;
+      display: grid;
+      align-content: start;
+      gap: 6px;
+    }
+
+    .itemTile strong,
+    .recipeTile strong,
+    .buildTile strong {
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .itemIconBig {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .tileMeta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .recipeTile.can,
+    .buildTile.active {
+      border-color: rgba(246, 197, 89, 0.8);
+      background: rgba(83, 59, 22, 0.42);
+    }
+
+    .mapWrap {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 14px;
+    }
+
+    #bigMapCanvas {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-height: calc(100vh - 160px);
+      border-radius: 8px;
+      background: #081321;
+      border: 1px solid var(--line);
+    }
+
+    .mapLegend {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .legendLine {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.22);
+    }
+
+    .settingsGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+    }
+
+    .settingTile {
+      min-height: 120px;
+    }
+
+    .settingTile label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .settingTile input[type="range"] {
+      width: 100%;
+    }
+
+    .pauseBox {
+      width: min(420px, 100%);
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .pauseBox h2 {
+      margin: 0 0 6px;
+      text-align: center;
+    }
+
+    .dangerBtn {
+      border-color: rgba(239, 91, 72, 0.6);
+      color: #ffd0ca;
+    }
+
+    @media (max-width: 900px) {
+      .overlay {
+        padding: 12px;
+      }
+
+      .menuStage,
+      .grid2,
+      .mapWrap {
+        grid-template-columns: 1fr;
+      }
+
+      .wipeStrip {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      #hotbar {
+        grid-template-columns: repeat(6, 54px);
+        gap: 5px;
+      }
+
+      .slot {
+        width: 54px;
+        height: 62px;
+      }
+
+      #statsPanel {
+        width: calc(100vw - 36px);
+        right: 18px;
+      }
+
+      #hintPanel,
+      #miniMapWrap {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="menuOverlay" class="overlay">
+    <div class="menuStage">
+      <section class="menuHero">
+        <div>
+          <div class="kicker">terrain water foundation rebuild</div>
+          <h1>Farken’s World – Beta 0.7.0</h1>
+          <p class="subtitle">
+            Nový mapový build opravuje vodu, propadání a levitující stavby:
+            řeky mají skutečnou hladinu, břehy jsou suché, monumenty sedí na
+            platformách a ostrov dostal hory, údolí a čitelnější textury.
+          </p>
+          <div class="wipeStrip">
+            <div class="wipeStat"><strong>Water fix</strong><span>modrá voda odpovídá gameplay hloubce</span></div>
+            <div class="wipeStat"><strong>Mountains</strong><span>hory, sedla, údolí a skalní výběžky</span></div>
+            <div class="wipeStat"><strong>Grounding</strong><span>platformy pod monumenty a lepší build height</span></div>
+            <div class="wipeStat"><strong>Textures</strong><span>lepší bark, tráva, barrel, cloud a zvířata</span></div>
+          </div>
+        </div>
+        <div class="menuControls">
+          <div class="controlLine"><strong>W A S D</strong><span>Pohyb po ostrově</span></div>
+          <div class="controlLine"><strong>Myš</strong><span>Rozhlížení po startu</span></div>
+          <div class="controlLine"><strong>LPM</strong><span>Těžit, sekat, útočit</span></div>
+          <div class="controlLine"><strong>E</strong><span>Loot, otevření, pití u vody</span></div>
+          <div class="controlLine"><strong>Tab / B</strong><span>Inventář a build menu</span></div>
+          <div class="controlLine"><strong>M / O</strong><span>Mapa a nastavení</span></div>
+        </div>
+      </section>
+
+      <aside class="menuPanel">
+        <button id="startGameButton" class="mainButton">Spustit experiment</button>
+        <div class="smallRow">
+          <button id="continueButton">Pokračovat</button>
+          <button id="resetSaveButton" class="dangerBtn">Smazat save</button>
+        </div>
+
+        <div>
+          <h2 class="sectionTitle">Preset výkonu</h2>
+          <div class="smallRow" style="margin-top:8px;">
+            <button id="presetLow">Low</button>
+            <button id="presetHigh">High</button>
+          </div>
+        </div>
+
+        <h2 class="sectionTitle">Changelog 0.7.0</h2>
+        <div class="changeLog">
+          <div class="changeLine"><strong>Voda</strong><span>Řeky a jezera mají novou hladinu nad terénem, širší modrou vrstvu a suchý břeh.</span></div>
+          <div class="changeLine"><strong>Terén</strong><span>Nové hory, sedla, údolí, pláže, koryta řek a plošiny pod monumenty.</span></div>
+          <div class="changeLine"><strong>Budovy</strong><span>Monumenty se pokládají na vyrovnané platformy, takže nelétají nad svahem.</span></div>
+          <div class="changeLine"><strong>Textury</strong><span>Přidané procedurální textury pro stromy, trávu, barely, loot crates, mraky a srst zvířat.</span></div>
+          <div class="changeLine"><strong>Mapa</strong><span>Mapa zvýrazňuje vodní hladiny, suché břehy, horské oblasti a mosty.</span></div>
+          <div class="changeLine"><strong>Audit</strong><span>Debug grid kontroluje stovky bodů povrchů, aby voda a břehy šly rychle ověřit.</span></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="gameHud" class="hidden">
+    <div id="crosshair"></div>
+    <div id="topCompass">
+      <div id="compassLabel">S 180°</div>
+      <div id="compassTrack"></div>
+    </div>
+    <div id="miniMapWrap" class="hudPanel">
+      <canvas id="miniMapCanvas" width="220" height="220"></canvas>
+    </div>
+    <div id="targetPanel" class="hudPanel hidden">
+      <div id="targetName">Target</div>
+      <div id="targetHint">LPM / E</div>
+    </div>
+    <div id="feed"></div>
+    <div id="centerMessage">Farken’s World – Beta 0.7.0</div>
+    <div id="hintPanel" class="hudPanel">
+      LPM těžba/útok | E loot/pít | Tab inventář | B stavění | F položit | R otočit |
+      M mapa | O settings | 1–6 hotbar | H bandage | G houba | ESC pauza
+    </div>
+    <div id="hotbar"></div>
+    <div id="statsPanel" class="hudPanel">
+      <div class="statLine"><span>❤</span><div class="bar"><div id="hpBar" style="background:#ef5b48"></div></div><strong id="hpText">100</strong></div>
+      <div class="statLine"><span>🍗</span><div class="bar"><div id="foodBar" style="background:#a3d95f"></div></div><strong id="foodText">100</strong></div>
+      <div class="statLine"><span>💧</span><div class="bar"><div id="waterBar" style="background:#4fb7e8"></div></div><strong id="waterText">100</strong></div>
+      <div class="statLine"><span>⚡</span><div class="bar"><div id="staminaBar" style="background:#e6b84c"></div></div><strong id="staminaText">100</strong></div>
+      <div class="statLine"><span>☢</span><div class="bar"><div id="radBar" style="background:#7bd85a"></div></div><strong id="radText">0</strong></div>
+      <div id="surfaceReadout">Povrch: Terén</div>
+      <div id="statusReadout">Status: OK</div>
+    </div>
+  </div>
+
+  <div id="inventoryOverlay" class="panelOverlay hidden">
+    <section class="panel">
+      <header class="panelHead">
+        <h2>Inventář / Crafting</h2>
+        <button data-close="inventoryOverlay">Zavřít</button>
+      </header>
+      <div class="panelBody grid2">
+        <div>
+          <h3 class="sectionTitle">Loot a suroviny</h3>
+          <div id="inventoryGrid" class="inventoryGrid" style="margin-top:10px;"></div>
+        </div>
+        <div>
+          <h3 class="sectionTitle">Crafting</h3>
+          <div id="craftingGrid" class="inventoryGrid" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="buildOverlay" class="panelOverlay hidden">
+    <section class="panel">
+      <header class="panelHead">
+        <h2>Build menu</h2>
+        <button data-close="buildOverlay">Zavřít</button>
+      </header>
+      <div class="panelBody">
+        <div id="buildGrid" class="inventoryGrid"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="mapOverlay" class="panelOverlay hidden">
+    <section class="panel">
+      <header class="panelHead">
+        <h2>Mapa ostrova</h2>
+        <div style="display:flex;gap:8px;">
+          <button id="clearWaypointButton">Smazat waypoint</button>
+          <button data-close="mapOverlay">Zavřít</button>
+        </div>
+      </header>
+      <div class="panelBody mapWrap">
+        <canvas id="bigMapCanvas" width="900" height="900"></canvas>
+        <div class="mapLegend">
+          <div class="legendLine"><span class="swatch" style="background:#3f7b3d"></span> Ostrov</div>
+          <div class="legendLine"><span class="swatch" style="background:#2d3034"></span> Silnice</div>
+          <div class="legendLine"><span class="swatch" style="background:#48b6e3"></span> Řeka / jezera</div>
+          <div class="legendLine"><span class="swatch" style="background:#e9b94f"></span> Mosty</div>
+          <div class="legendLine"><span class="swatch" style="background:#f5f7fb"></span> Monumenty</div>
+          <div class="legendLine"><span class="swatch" style="background:#ef5b48"></span> Radiace</div>
+          <div class="legendLine"><span class="swatch" style="background:#75c878"></span> Loot / resources</div>
+          <div class="legendLine"><span class="swatch" style="background:#f472b6"></span> Spawn bag</div>
+          <div style="margin-top:10px;color:var(--muted);font-size:13px;line-height:1.45;">
+            Kliknutím do mapy nastavíš waypoint. Mosty se kreslí nad vodou stejně jako ve světě.
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="settingsOverlay" class="panelOverlay hidden">
+    <section class="panel">
+      <header class="panelHead">
+        <h2>Nastavení</h2>
+        <button data-close="settingsOverlay">Zavřít</button>
+      </header>
+      <div class="panelBody settingsGrid">
+        <div class="settingTile">
+          <strong>Render scale</strong>
+          <label id="renderScaleLabel">1.00x</label>
+          <input id="renderScaleInput" type="range" min="0.6" max="1.25" value="1" step="0.05" />
+        </div>
+        <div class="settingTile">
+          <strong>Hustota světa</strong>
+          <label id="densityLabel">medium</label>
+          <input id="densityInput" type="range" min="0" max="2" value="1" step="1" />
+        </div>
+        <div class="settingTile">
+          <strong>Vizuály</strong>
+          <button id="toggleShadows">Stíny: zapnuto</button>
+          <button id="toggleFog">Mlha: zapnuto</button>
+        </div>
+        <div class="settingTile">
+          <strong>Gameplay kamera</strong>
+          <button id="toggleBob">Camera bob: zapnuto</button>
+          <button id="saveButton">Uložit hru</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="pauseOverlay" class="panelOverlay hidden">
+    <div class="pauseBox">
+      <h2>Pauza</h2>
+      <button id="resumeButton" class="mainButton">Pokračovat</button>
+      <button id="pauseSaveButton">Uložit hru</button>
+      <button id="pauseInventoryButton">Inventář</button>
+      <button id="pauseMapButton">Mapa</button>
+      <button id="pauseSettingsButton">Nastavení</button>
+      <button id="returnMenuButton" class="dangerBtn">Zpět do menu</button>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    const VERSION = "0.7.0";
+    const SAVE_KEY = "farkensWorldSave_v070";
+    const WORLD_RADIUS = 365;
+    const WORLD_SIZE = WORLD_RADIUS * 2;
+    const EYE_HEIGHT = 3.35;
+    const DEG = Math.PI / 180;
+
+    let scene;
+    let camera;
+    let renderer;
+    let clock;
+    let ambientLight;
+    let sunLight;
+    let miniMapCtx;
+    let bigMapCtx;
+    let terrainMesh;
+    let buildGhost;
+    let heldGroup;
+    let animationId = 0;
+    let currentTarget = null;
+    let currentFps = 0;
+    let fpsAccum = 0;
+    let fpsFrames = 0;
+    let lastMiniMapDraw = 0;
+
+    const keys = Object.create(null);
+    const interactables = [];
+    const collisions = [];
+    const markers = [];
+    const roads = [];
+    const riverPaths = [];
+    const ponds = [];
+    const bridges = [];
+    const monuments = [];
+    const animals = [];
+    const buildObjects = [];
+    const animated = [];
+    const terrainStamps = [];
+    const mountainZones = [];
+    const valleyZones = [];
+    const waterPlanes = [];
+    const terrainAuditSamples = [];
+    const authoredTerrainAuditSamples = [
+      {
+        name: "river-validation-000",
+        kind: "river-validation",
+        x: -300,
+        z: -150
+      },
+      {
+        name: "river-validation-001",
+        kind: "river-validation",
+        x: -270,
+        z: -150
+      },
+      {
+        name: "river-validation-002",
+        kind: "river-validation",
+        x: -240,
+        z: -150
+      },
+      {
+        name: "river-validation-003",
+        kind: "river-validation",
+        x: -210,
+        z: -150
+      },
+      {
+        name: "river-validation-004",
+        kind: "river-validation",
+        x: -180,
+        z: -150
+      },
+      {
+        name: "river-validation-005",
+        kind: "river-validation",
+        x: -150,
+        z: -150
+      },
+      {
+        name: "river-validation-006",
+        kind: "river-validation",
+        x: -120,
+        z: -150
+      },
+      {
+        name: "river-validation-007",
+        kind: "river-validation",
+        x: -90,
+        z: -150
+      },
+      {
+        name: "river-validation-008",
+        kind: "river-validation",
+        x: -60,
+        z: -150
+      },
+      {
+        name: "river-validation-009",
+        kind: "river-validation",
+        x: -30,
+        z: -150
+      },
+      {
+        name: "river-validation-010",
+        kind: "river-validation",
+        x: 0,
+        z: -150
+      },
+      {
+        name: "river-validation-011",
+        kind: "river-validation",
+        x: 30,
+        z: -150
+      },
+      {
+        name: "river-validation-012",
+        kind: "river-validation",
+        x: 60,
+        z: -150
+      },
+      {
+        name: "river-validation-013",
+        kind: "river-validation",
+        x: 90,
+        z: -150
+      },
+      {
+        name: "river-validation-014",
+        kind: "river-validation",
+        x: 120,
+        z: -150
+      },
+      {
+        name: "river-validation-015",
+        kind: "river-validation",
+        x: 150,
+        z: -150
+      },
+      {
+        name: "river-validation-016",
+        kind: "river-validation",
+        x: 180,
+        z: -150
+      },
+      {
+        name: "river-validation-017",
+        kind: "river-validation",
+        x: 210,
+        z: -150
+      },
+      {
+        name: "river-validation-018",
+        kind: "river-validation",
+        x: 240,
+        z: -150
+      },
+      {
+        name: "river-validation-019",
+        kind: "river-validation",
+        x: 270,
+        z: -150
+      },
+      {
+        name: "river-validation-020",
+        kind: "river-validation",
+        x: 300,
+        z: -150
+      },
+      {
+        name: "river-validation-021",
+        kind: "river-validation",
+        x: -300,
+        z: -120
+      },
+      {
+        name: "river-validation-022",
+        kind: "river-validation",
+        x: -270,
+        z: -120
+      },
+      {
+        name: "river-validation-023",
+        kind: "river-validation",
+        x: -240,
+        z: -120
+      },
+      {
+        name: "river-validation-024",
+        kind: "river-validation",
+        x: -210,
+        z: -120
+      },
+      {
+        name: "river-validation-025",
+        kind: "river-validation",
+        x: -180,
+        z: -120
+      },
+      {
+        name: "river-validation-026",
+        kind: "river-validation",
+        x: -150,
+        z: -120
+      },
+      {
+        name: "river-validation-027",
+        kind: "river-validation",
+        x: -120,
+        z: -120
+      },
+      {
+        name: "river-validation-028",
+        kind: "river-validation",
+        x: -90,
+        z: -120
+      },
+      {
+        name: "river-validation-029",
+        kind: "river-validation",
+        x: -60,
+        z: -120
+      },
+      {
+        name: "river-validation-030",
+        kind: "river-validation",
+        x: -30,
+        z: -120
+      },
+      {
+        name: "river-validation-031",
+        kind: "river-validation",
+        x: 0,
+        z: -120
+      },
+      {
+        name: "river-validation-032",
+        kind: "river-validation",
+        x: 30,
+        z: -120
+      },
+      {
+        name: "river-validation-033",
+        kind: "river-validation",
+        x: 60,
+        z: -120
+      },
+      {
+        name: "river-validation-034",
+        kind: "river-validation",
+        x: 90,
+        z: -120
+      },
+      {
+        name: "river-validation-035",
+        kind: "river-validation",
+        x: 120,
+        z: -120
+      },
+      {
+        name: "river-validation-036",
+        kind: "river-validation",
+        x: 150,
+        z: -120
+      },
+      {
+        name: "river-validation-037",
+        kind: "river-validation",
+        x: 180,
+        z: -120
+      },
+      {
+        name: "river-validation-038",
+        kind: "river-validation",
+        x: 210,
+        z: -120
+      },
+      {
+        name: "river-validation-039",
+        kind: "river-validation",
+        x: 240,
+        z: -120
+      },
+      {
+        name: "river-validation-040",
+        kind: "river-validation",
+        x: 270,
+        z: -120
+      },
+      {
+        name: "river-validation-041",
+        kind: "river-validation",
+        x: 300,
+        z: -120
+      },
+      {
+        name: "river-validation-042",
+        kind: "river-validation",
+        x: -300,
+        z: -90
+      },
+      {
+        name: "river-validation-043",
+        kind: "river-validation",
+        x: -270,
+        z: -90
+      },
+      {
+        name: "river-validation-044",
+        kind: "river-validation",
+        x: -240,
+        z: -90
+      },
+      {
+        name: "river-validation-045",
+        kind: "river-validation",
+        x: -210,
+        z: -90
+      },
+      {
+        name: "river-validation-046",
+        kind: "river-validation",
+        x: -180,
+        z: -90
+      },
+      {
+        name: "river-validation-047",
+        kind: "river-validation",
+        x: -150,
+        z: -90
+      },
+      {
+        name: "river-validation-048",
+        kind: "river-validation",
+        x: -120,
+        z: -90
+      },
+      {
+        name: "river-validation-049",
+        kind: "river-validation",
+        x: -90,
+        z: -90
+      },
+      {
+        name: "river-validation-050",
+        kind: "river-validation",
+        x: -60,
+        z: -90
+      },
+      {
+        name: "river-validation-051",
+        kind: "river-validation",
+        x: -30,
+        z: -90
+      },
+      {
+        name: "river-validation-052",
+        kind: "river-validation",
+        x: 0,
+        z: -90
+      },
+      {
+        name: "river-validation-053",
+        kind: "river-validation",
+        x: 30,
+        z: -90
+      },
+      {
+        name: "river-validation-054",
+        kind: "river-validation",
+        x: 60,
+        z: -90
+      },
+      {
+        name: "river-validation-055",
+        kind: "river-validation",
+        x: 90,
+        z: -90
+      },
+      {
+        name: "river-validation-056",
+        kind: "river-validation",
+        x: 120,
+        z: -90
+      },
+      {
+        name: "river-validation-057",
+        kind: "river-validation",
+        x: 150,
+        z: -90
+      },
+      {
+        name: "river-validation-058",
+        kind: "river-validation",
+        x: 180,
+        z: -90
+      },
+      {
+        name: "river-validation-059",
+        kind: "river-validation",
+        x: 210,
+        z: -90
+      },
+      {
+        name: "river-validation-060",
+        kind: "river-validation",
+        x: 240,
+        z: -90
+      },
+      {
+        name: "river-validation-061",
+        kind: "river-validation",
+        x: 270,
+        z: -90
+      },
+      {
+        name: "river-validation-062",
+        kind: "river-validation",
+        x: 300,
+        z: -90
+      },
+      {
+        name: "river-validation-063",
+        kind: "river-validation",
+        x: -300,
+        z: -60
+      },
+      {
+        name: "river-validation-064",
+        kind: "river-validation",
+        x: -270,
+        z: -60
+      },
+      {
+        name: "river-validation-065",
+        kind: "river-validation",
+        x: -240,
+        z: -60
+      },
+      {
+        name: "river-validation-066",
+        kind: "river-validation",
+        x: -210,
+        z: -60
+      },
+      {
+        name: "river-validation-067",
+        kind: "river-validation",
+        x: -180,
+        z: -60
+      },
+      {
+        name: "river-validation-068",
+        kind: "river-validation",
+        x: -150,
+        z: -60
+      },
+      {
+        name: "river-validation-069",
+        kind: "river-validation",
+        x: -120,
+        z: -60
+      },
+      {
+        name: "river-validation-070",
+        kind: "river-validation",
+        x: -90,
+        z: -60
+      },
+      {
+        name: "river-validation-071",
+        kind: "river-validation",
+        x: -60,
+        z: -60
+      },
+      {
+        name: "river-validation-072",
+        kind: "river-validation",
+        x: -30,
+        z: -60
+      },
+      {
+        name: "river-validation-073",
+        kind: "river-validation",
+        x: 0,
+        z: -60
+      },
+      {
+        name: "river-validation-074",
+        kind: "river-validation",
+        x: 30,
+        z: -60
+      },
+      {
+        name: "river-validation-075",
+        kind: "river-validation",
+        x: 60,
+        z: -60
+      },
+      {
+        name: "river-validation-076",
+        kind: "river-validation",
+        x: 90,
+        z: -60
+      },
+      {
+        name: "river-validation-077",
+        kind: "river-validation",
+        x: 120,
+        z: -60
+      },
+      {
+        name: "river-validation-078",
+        kind: "river-validation",
+        x: 150,
+        z: -60
+      },
+      {
+        name: "river-validation-079",
+        kind: "river-validation",
+        x: 180,
+        z: -60
+      },
+      {
+        name: "river-validation-080",
+        kind: "river-validation",
+        x: 210,
+        z: -60
+      },
+      {
+        name: "river-validation-081",
+        kind: "river-validation",
+        x: 240,
+        z: -60
+      },
+      {
+        name: "river-validation-082",
+        kind: "river-validation",
+        x: 270,
+        z: -60
+      },
+      {
+        name: "river-validation-083",
+        kind: "river-validation",
+        x: 300,
+        z: -60
+      },
+      {
+        name: "river-validation-084",
+        kind: "river-validation",
+        x: -300,
+        z: -30
+      },
+      {
+        name: "river-validation-085",
+        kind: "river-validation",
+        x: -270,
+        z: -30
+      },
+      {
+        name: "river-validation-086",
+        kind: "river-validation",
+        x: -240,
+        z: -30
+      },
+      {
+        name: "river-validation-087",
+        kind: "river-validation",
+        x: -210,
+        z: -30
+      },
+      {
+        name: "river-validation-088",
+        kind: "river-validation",
+        x: -180,
+        z: -30
+      },
+      {
+        name: "river-validation-089",
+        kind: "river-validation",
+        x: -150,
+        z: -30
+      },
+      {
+        name: "river-validation-090",
+        kind: "river-validation",
+        x: -120,
+        z: -30
+      },
+      {
+        name: "river-validation-091",
+        kind: "river-validation",
+        x: -90,
+        z: -30
+      },
+      {
+        name: "river-validation-092",
+        kind: "river-validation",
+        x: -60,
+        z: -30
+      },
+      {
+        name: "river-validation-093",
+        kind: "river-validation",
+        x: -30,
+        z: -30
+      },
+      {
+        name: "river-validation-094",
+        kind: "river-validation",
+        x: 0,
+        z: -30
+      },
+      {
+        name: "river-validation-095",
+        kind: "river-validation",
+        x: 30,
+        z: -30
+      },
+      {
+        name: "river-validation-096",
+        kind: "river-validation",
+        x: 60,
+        z: -30
+      },
+      {
+        name: "river-validation-097",
+        kind: "river-validation",
+        x: 90,
+        z: -30
+      },
+      {
+        name: "river-validation-098",
+        kind: "river-validation",
+        x: 120,
+        z: -30
+      },
+      {
+        name: "river-validation-099",
+        kind: "river-validation",
+        x: 150,
+        z: -30
+      },
+      {
+        name: "river-validation-100",
+        kind: "river-validation",
+        x: 180,
+        z: -30
+      },
+      {
+        name: "river-validation-101",
+        kind: "river-validation",
+        x: 210,
+        z: -30
+      },
+      {
+        name: "river-validation-102",
+        kind: "river-validation",
+        x: 240,
+        z: -30
+      },
+      {
+        name: "river-validation-103",
+        kind: "river-validation",
+        x: 270,
+        z: -30
+      },
+      {
+        name: "river-validation-104",
+        kind: "river-validation",
+        x: 300,
+        z: -30
+      },
+      {
+        name: "river-validation-105",
+        kind: "river-validation",
+        x: -300,
+        z: 0
+      },
+      {
+        name: "river-validation-106",
+        kind: "river-validation",
+        x: -270,
+        z: 0
+      },
+      {
+        name: "river-validation-107",
+        kind: "river-validation",
+        x: -240,
+        z: 0
+      },
+      {
+        name: "river-validation-108",
+        kind: "river-validation",
+        x: -210,
+        z: 0
+      },
+      {
+        name: "river-validation-109",
+        kind: "river-validation",
+        x: -180,
+        z: 0
+      },
+      {
+        name: "river-validation-110",
+        kind: "river-validation",
+        x: -150,
+        z: 0
+      },
+      {
+        name: "river-validation-111",
+        kind: "river-validation",
+        x: -120,
+        z: 0
+      },
+      {
+        name: "river-validation-112",
+        kind: "river-validation",
+        x: -90,
+        z: 0
+      },
+      {
+        name: "river-validation-113",
+        kind: "river-validation",
+        x: -60,
+        z: 0
+      },
+      {
+        name: "river-validation-114",
+        kind: "river-validation",
+        x: -30,
+        z: 0
+      },
+      {
+        name: "river-validation-115",
+        kind: "river-validation",
+        x: 0,
+        z: 0
+      },
+      {
+        name: "river-validation-116",
+        kind: "river-validation",
+        x: 30,
+        z: 0
+      },
+      {
+        name: "river-validation-117",
+        kind: "river-validation",
+        x: 60,
+        z: 0
+      },
+      {
+        name: "river-validation-118",
+        kind: "river-validation",
+        x: 90,
+        z: 0
+      },
+      {
+        name: "river-validation-119",
+        kind: "river-validation",
+        x: 120,
+        z: 0
+      },
+      {
+        name: "river-validation-120",
+        kind: "river-validation",
+        x: 150,
+        z: 0
+      },
+      {
+        name: "river-validation-121",
+        kind: "river-validation",
+        x: 180,
+        z: 0
+      },
+      {
+        name: "river-validation-122",
+        kind: "river-validation",
+        x: 210,
+        z: 0
+      },
+      {
+        name: "river-validation-123",
+        kind: "river-validation",
+        x: 240,
+        z: 0
+      },
+      {
+        name: "river-validation-124",
+        kind: "river-validation",
+        x: 270,
+        z: 0
+      },
+      {
+        name: "river-validation-125",
+        kind: "river-validation",
+        x: 300,
+        z: 0
+      },
+      {
+        name: "river-validation-126",
+        kind: "river-validation",
+        x: -300,
+        z: 30
+      },
+      {
+        name: "river-validation-127",
+        kind: "river-validation",
+        x: -270,
+        z: 30
+      },
+      {
+        name: "river-validation-128",
+        kind: "river-validation",
+        x: -240,
+        z: 30
+      },
+      {
+        name: "river-validation-129",
+        kind: "river-validation",
+        x: -210,
+        z: 30
+      },
+      {
+        name: "river-validation-130",
+        kind: "river-validation",
+        x: -180,
+        z: 30
+      },
+      {
+        name: "river-validation-131",
+        kind: "river-validation",
+        x: -150,
+        z: 30
+      },
+      {
+        name: "river-validation-132",
+        kind: "river-validation",
+        x: -120,
+        z: 30
+      },
+      {
+        name: "river-validation-133",
+        kind: "river-validation",
+        x: -90,
+        z: 30
+      },
+      {
+        name: "river-validation-134",
+        kind: "river-validation",
+        x: -60,
+        z: 30
+      },
+      {
+        name: "river-validation-135",
+        kind: "river-validation",
+        x: -30,
+        z: 30
+      },
+      {
+        name: "river-validation-136",
+        kind: "river-validation",
+        x: 0,
+        z: 30
+      },
+      {
+        name: "river-validation-137",
+        kind: "river-validation",
+        x: 30,
+        z: 30
+      },
+      {
+        name: "river-validation-138",
+        kind: "river-validation",
+        x: 60,
+        z: 30
+      },
+      {
+        name: "river-validation-139",
+        kind: "river-validation",
+        x: 90,
+        z: 30
+      },
+      {
+        name: "river-validation-140",
+        kind: "river-validation",
+        x: 120,
+        z: 30
+      },
+      {
+        name: "river-validation-141",
+        kind: "river-validation",
+        x: 150,
+        z: 30
+      },
+      {
+        name: "river-validation-142",
+        kind: "river-validation",
+        x: 180,
+        z: 30
+      },
+      {
+        name: "river-validation-143",
+        kind: "river-validation",
+        x: 210,
+        z: 30
+      },
+      {
+        name: "river-validation-144",
+        kind: "river-validation",
+        x: 240,
+        z: 30
+      },
+      {
+        name: "river-validation-145",
+        kind: "river-validation",
+        x: 270,
+        z: 30
+      },
+      {
+        name: "river-validation-146",
+        kind: "river-validation",
+        x: 300,
+        z: 30
+      },
+      {
+        name: "river-validation-147",
+        kind: "river-validation",
+        x: -300,
+        z: 60
+      },
+      {
+        name: "river-validation-148",
+        kind: "river-validation",
+        x: -270,
+        z: 60
+      },
+      {
+        name: "river-validation-149",
+        kind: "river-validation",
+        x: -240,
+        z: 60
+      },
+      {
+        name: "river-validation-150",
+        kind: "river-validation",
+        x: -210,
+        z: 60
+      },
+      {
+        name: "river-validation-151",
+        kind: "river-validation",
+        x: -180,
+        z: 60
+      },
+      {
+        name: "river-validation-152",
+        kind: "river-validation",
+        x: -150,
+        z: 60
+      },
+      {
+        name: "river-validation-153",
+        kind: "river-validation",
+        x: -120,
+        z: 60
+      },
+      {
+        name: "river-validation-154",
+        kind: "river-validation",
+        x: -90,
+        z: 60
+      },
+      {
+        name: "river-validation-155",
+        kind: "river-validation",
+        x: -60,
+        z: 60
+      },
+      {
+        name: "river-validation-156",
+        kind: "river-validation",
+        x: -30,
+        z: 60
+      },
+      {
+        name: "river-validation-157",
+        kind: "river-validation",
+        x: 0,
+        z: 60
+      },
+      {
+        name: "river-validation-158",
+        kind: "river-validation",
+        x: 30,
+        z: 60
+      },
+      {
+        name: "river-validation-159",
+        kind: "river-validation",
+        x: 60,
+        z: 60
+      },
+      {
+        name: "river-validation-160",
+        kind: "river-validation",
+        x: 90,
+        z: 60
+      },
+      {
+        name: "river-validation-161",
+        kind: "river-validation",
+        x: 120,
+        z: 60
+      },
+      {
+        name: "river-validation-162",
+        kind: "river-validation",
+        x: 150,
+        z: 60
+      },
+      {
+        name: "river-validation-163",
+        kind: "river-validation",
+        x: 180,
+        z: 60
+      },
+      {
+        name: "river-validation-164",
+        kind: "river-validation",
+        x: 210,
+        z: 60
+      },
+      {
+        name: "river-validation-165",
+        kind: "river-validation",
+        x: 240,
+        z: 60
+      },
+      {
+        name: "river-validation-166",
+        kind: "river-validation",
+        x: 270,
+        z: 60
+      },
+      {
+        name: "river-validation-167",
+        kind: "river-validation",
+        x: 300,
+        z: 60
+      },
+      {
+        name: "river-validation-168",
+        kind: "river-validation",
+        x: -300,
+        z: 90
+      },
+      {
+        name: "river-validation-169",
+        kind: "river-validation",
+        x: -270,
+        z: 90
+      },
+      {
+        name: "river-validation-170",
+        kind: "river-validation",
+        x: -240,
+        z: 90
+      },
+      {
+        name: "river-validation-171",
+        kind: "river-validation",
+        x: -210,
+        z: 90
+      },
+      {
+        name: "river-validation-172",
+        kind: "river-validation",
+        x: -180,
+        z: 90
+      },
+      {
+        name: "river-validation-173",
+        kind: "river-validation",
+        x: -150,
+        z: 90
+      },
+      {
+        name: "river-validation-174",
+        kind: "river-validation",
+        x: -120,
+        z: 90
+      },
+      {
+        name: "river-validation-175",
+        kind: "river-validation",
+        x: -90,
+        z: 90
+      },
+      {
+        name: "river-validation-176",
+        kind: "river-validation",
+        x: -60,
+        z: 90
+      },
+      {
+        name: "river-validation-177",
+        kind: "river-validation",
+        x: -30,
+        z: 90
+      },
+      {
+        name: "river-validation-178",
+        kind: "river-validation",
+        x: 0,
+        z: 90
+      },
+      {
+        name: "river-validation-179",
+        kind: "river-validation",
+        x: 30,
+        z: 90
+      },
+      {
+        name: "river-validation-180",
+        kind: "river-validation",
+        x: 60,
+        z: 90
+      },
+      {
+        name: "river-validation-181",
+        kind: "river-validation",
+        x: 90,
+        z: 90
+      },
+      {
+        name: "river-validation-182",
+        kind: "river-validation",
+        x: 120,
+        z: 90
+      },
+      {
+        name: "river-validation-183",
+        kind: "river-validation",
+        x: 150,
+        z: 90
+      },
+      {
+        name: "river-validation-184",
+        kind: "river-validation",
+        x: 180,
+        z: 90
+      },
+      {
+        name: "river-validation-185",
+        kind: "river-validation",
+        x: 210,
+        z: 90
+      },
+      {
+        name: "river-validation-186",
+        kind: "river-validation",
+        x: 240,
+        z: 90
+      },
+      {
+        name: "river-validation-187",
+        kind: "river-validation",
+        x: 270,
+        z: 90
+      },
+      {
+        name: "river-validation-188",
+        kind: "river-validation",
+        x: 300,
+        z: 90
+      },
+      {
+        name: "river-validation-189",
+        kind: "river-validation",
+        x: -300,
+        z: 120
+      },
+      {
+        name: "river-validation-190",
+        kind: "river-validation",
+        x: -270,
+        z: 120
+      },
+      {
+        name: "river-validation-191",
+        kind: "river-validation",
+        x: -240,
+        z: 120
+      },
+      {
+        name: "river-validation-192",
+        kind: "river-validation",
+        x: -210,
+        z: 120
+      },
+      {
+        name: "river-validation-193",
+        kind: "river-validation",
+        x: -180,
+        z: 120
+      },
+      {
+        name: "river-validation-194",
+        kind: "river-validation",
+        x: -150,
+        z: 120
+      },
+      {
+        name: "river-validation-195",
+        kind: "river-validation",
+        x: -120,
+        z: 120
+      },
+      {
+        name: "river-validation-196",
+        kind: "river-validation",
+        x: -90,
+        z: 120
+      },
+      {
+        name: "river-validation-197",
+        kind: "river-validation",
+        x: -60,
+        z: 120
+      },
+      {
+        name: "river-validation-198",
+        kind: "river-validation",
+        x: -30,
+        z: 120
+      },
+      {
+        name: "river-validation-199",
+        kind: "river-validation",
+        x: 0,
+        z: 120
+      },
+      {
+        name: "river-validation-200",
+        kind: "river-validation",
+        x: 30,
+        z: 120
+      },
+      {
+        name: "river-validation-201",
+        kind: "river-validation",
+        x: 60,
+        z: 120
+      },
+      {
+        name: "river-validation-202",
+        kind: "river-validation",
+        x: 90,
+        z: 120
+      },
+      {
+        name: "river-validation-203",
+        kind: "river-validation",
+        x: 120,
+        z: 120
+      },
+      {
+        name: "river-validation-204",
+        kind: "river-validation",
+        x: 150,
+        z: 120
+      },
+      {
+        name: "river-validation-205",
+        kind: "river-validation",
+        x: 180,
+        z: 120
+      },
+      {
+        name: "river-validation-206",
+        kind: "river-validation",
+        x: 210,
+        z: 120
+      },
+      {
+        name: "river-validation-207",
+        kind: "river-validation",
+        x: 240,
+        z: 120
+      },
+      {
+        name: "river-validation-208",
+        kind: "river-validation",
+        x: 270,
+        z: 120
+      },
+      {
+        name: "river-validation-209",
+        kind: "river-validation",
+        x: 300,
+        z: 120
+      },
+      {
+        name: "river-validation-210",
+        kind: "river-validation",
+        x: -300,
+        z: 150
+      },
+      {
+        name: "river-validation-211",
+        kind: "river-validation",
+        x: -270,
+        z: 150
+      },
+      {
+        name: "river-validation-212",
+        kind: "river-validation",
+        x: -240,
+        z: 150
+      },
+      {
+        name: "river-validation-213",
+        kind: "river-validation",
+        x: -210,
+        z: 150
+      },
+      {
+        name: "river-validation-214",
+        kind: "river-validation",
+        x: -180,
+        z: 150
+      },
+      {
+        name: "river-validation-215",
+        kind: "river-validation",
+        x: -150,
+        z: 150
+      },
+      {
+        name: "river-validation-216",
+        kind: "river-validation",
+        x: -120,
+        z: 150
+      },
+      {
+        name: "river-validation-217",
+        kind: "river-validation",
+        x: -90,
+        z: 150
+      },
+      {
+        name: "river-validation-218",
+        kind: "river-validation",
+        x: -60,
+        z: 150
+      },
+      {
+        name: "river-validation-219",
+        kind: "river-validation",
+        x: -30,
+        z: 150
+      },
+      {
+        name: "river-validation-220",
+        kind: "river-validation",
+        x: 0,
+        z: 150
+      },
+      {
+        name: "river-validation-221",
+        kind: "river-validation",
+        x: 30,
+        z: 150
+      },
+      {
+        name: "river-validation-222",
+        kind: "river-validation",
+        x: 60,
+        z: 150
+      },
+      {
+        name: "river-validation-223",
+        kind: "river-validation",
+        x: 90,
+        z: 150
+      },
+      {
+        name: "river-validation-224",
+        kind: "river-validation",
+        x: 120,
+        z: 150
+      },
+      {
+        name: "river-validation-225",
+        kind: "river-validation",
+        x: 150,
+        z: 150
+      },
+      {
+        name: "river-validation-226",
+        kind: "river-validation",
+        x: 180,
+        z: 150
+      },
+      {
+        name: "river-validation-227",
+        kind: "river-validation",
+        x: 210,
+        z: 150
+      },
+      {
+        name: "river-validation-228",
+        kind: "river-validation",
+        x: 240,
+        z: 150
+      },
+      {
+        name: "river-validation-229",
+        kind: "river-validation",
+        x: 270,
+        z: 150
+      },
+      {
+        name: "river-validation-230",
+        kind: "river-validation",
+        x: 300,
+        z: 150
+      },
+      {
+        name: "mountain-validation-231",
+        kind: "mountain-validation",
+        x: -160,
+        z: -320
+      },
+      {
+        name: "mountain-validation-232",
+        kind: "mountain-validation",
+        x: -120,
+        z: -320
+      },
+      {
+        name: "mountain-validation-233",
+        kind: "mountain-validation",
+        x: -80,
+        z: -320
+      },
+      {
+        name: "mountain-validation-234",
+        kind: "mountain-validation",
+        x: -40,
+        z: -320
+      },
+      {
+        name: "mountain-validation-235",
+        kind: "mountain-validation",
+        x: 0,
+        z: -320
+      },
+      {
+        name: "mountain-validation-236",
+        kind: "mountain-validation",
+        x: 40,
+        z: -320
+      },
+      {
+        name: "mountain-validation-237",
+        kind: "mountain-validation",
+        x: 80,
+        z: -320
+      },
+      {
+        name: "mountain-validation-238",
+        kind: "mountain-validation",
+        x: 120,
+        z: -320
+      },
+      {
+        name: "mountain-validation-239",
+        kind: "mountain-validation",
+        x: 160,
+        z: -320
+      },
+      {
+        name: "mountain-validation-240",
+        kind: "mountain-validation",
+        x: -200,
+        z: -280
+      },
+      {
+        name: "mountain-validation-241",
+        kind: "mountain-validation",
+        x: -160,
+        z: -280
+      },
+      {
+        name: "mountain-validation-242",
+        kind: "mountain-validation",
+        x: -120,
+        z: -280
+      },
+      {
+        name: "mountain-validation-243",
+        kind: "mountain-validation",
+        x: -80,
+        z: -280
+      },
+      {
+        name: "mountain-validation-244",
+        kind: "mountain-validation",
+        x: -40,
+        z: -280
+      },
+      {
+        name: "mountain-validation-245",
+        kind: "mountain-validation",
+        x: 0,
+        z: -280
+      },
+      {
+        name: "mountain-validation-246",
+        kind: "mountain-validation",
+        x: 40,
+        z: -280
+      },
+      {
+        name: "mountain-validation-247",
+        kind: "mountain-validation",
+        x: 80,
+        z: -280
+      },
+      {
+        name: "mountain-validation-248",
+        kind: "mountain-validation",
+        x: 120,
+        z: -280
+      },
+      {
+        name: "mountain-validation-249",
+        kind: "mountain-validation",
+        x: 160,
+        z: -280
+      },
+      {
+        name: "mountain-validation-250",
+        kind: "mountain-validation",
+        x: 200,
+        z: -280
+      },
+      {
+        name: "mountain-validation-251",
+        kind: "mountain-validation",
+        x: -240,
+        z: -240
+      },
+      {
+        name: "mountain-validation-252",
+        kind: "mountain-validation",
+        x: -200,
+        z: -240
+      },
+      {
+        name: "mountain-validation-253",
+        kind: "mountain-validation",
+        x: -160,
+        z: -240
+      },
+      {
+        name: "mountain-validation-254",
+        kind: "mountain-validation",
+        x: -120,
+        z: -240
+      },
+      {
+        name: "mountain-validation-255",
+        kind: "mountain-validation",
+        x: -80,
+        z: -240
+      },
+      {
+        name: "mountain-validation-256",
+        kind: "mountain-validation",
+        x: -40,
+        z: -240
+      },
+      {
+        name: "mountain-validation-257",
+        kind: "mountain-validation",
+        x: 0,
+        z: -240
+      },
+      {
+        name: "mountain-validation-258",
+        kind: "mountain-validation",
+        x: 40,
+        z: -240
+      },
+      {
+        name: "mountain-validation-259",
+        kind: "mountain-validation",
+        x: 80,
+        z: -240
+      },
+      {
+        name: "mountain-validation-260",
+        kind: "mountain-validation",
+        x: 120,
+        z: -240
+      },
+      {
+        name: "mountain-validation-261",
+        kind: "mountain-validation",
+        x: 160,
+        z: -240
+      },
+      {
+        name: "mountain-validation-262",
+        kind: "mountain-validation",
+        x: 200,
+        z: -240
+      },
+      {
+        name: "mountain-validation-263",
+        kind: "mountain-validation",
+        x: 240,
+        z: -240
+      },
+      {
+        name: "mountain-validation-264",
+        kind: "mountain-validation",
+        x: -280,
+        z: -200
+      },
+      {
+        name: "mountain-validation-265",
+        kind: "mountain-validation",
+        x: -240,
+        z: -200
+      },
+      {
+        name: "mountain-validation-266",
+        kind: "mountain-validation",
+        x: -200,
+        z: -200
+      },
+      {
+        name: "mountain-validation-267",
+        kind: "mountain-validation",
+        x: -160,
+        z: -200
+      },
+      {
+        name: "mountain-validation-268",
+        kind: "mountain-validation",
+        x: -120,
+        z: -200
+      },
+      {
+        name: "mountain-validation-269",
+        kind: "mountain-validation",
+        x: -80,
+        z: -200
+      },
+    ];
+    const materials = {};
+
+    const ui = {};
+
+    const settings = {
+      shadows: true,
+      fog: true,
+      bob: true,
+      renderScale: 1,
+      density: 1
+    };
+
+    const state = {
+      started: false,
+      inMenu: true,
+      paused: true,
+      weather: "clear",
+      weatherTimer: 70,
+      rain: 0,
+      time: 0,
+      day: 0.22,
+      temperature: 18,
+      surface: "Terén",
+      waypoint: null,
+      lastSave: 0,
+      messageTimer: 0,
+      pendingLoad: false,
+      buildMode: false,
+      buildRotation: 0,
+      selectedBuild: "foundation"
+    };
+
+    const player = {
+      x: -24,
+      z: 32,
+      y: 0,
+      yaw: Math.PI,
+      pitch: 0,
+      vx: 0,
+      vz: 0,
+      health: 100,
+      hunger: 100,
+      thirst: 100,
+      stamina: 100,
+      wetness: 0,
+      radiation: 0,
+      speed: 12.5,
+      selectedSlot: 0,
+      respawn: null,
+      inventory: {
+        wood: 80,
+        stone: 45,
+        metalOre: 0,
+        sulfurOre: 0,
+        metalFragments: 0,
+        cloth: 12,
+        scrap: 0,
+        lowGradeFuel: 0,
+        crudeOil: 0,
+        animalFat: 0,
+        mushroom: 1,
+        bandage: 1,
+        waterBottle: 0,
+        torch: 1,
+        rock: 1,
+        hatchet: 0,
+        pickaxe: 0,
+        spear: 0,
+        bow: 0,
+        buildingPlan: 1,
+        campfire: 0,
+        sleepingBag: 0,
+        storageBox: 0
+      }
+    };
+
+    const itemInfo = {
+      wood: ["Dřevo", "🪵"],
+      stone: ["Kámen", "🪨"],
+      metalOre: ["Metal ore", "⛓"],
+      sulfurOre: ["Sulfur ore", "🟡"],
+      metalFragments: ["Metal fragments", "🔩"],
+      cloth: ["Cloth", "🧵"],
+      scrap: ["Scrap", "⚙"],
+      lowGradeFuel: ["Low grade fuel", "🛢"],
+      crudeOil: ["Crude oil", "🛢"],
+      animalFat: ["Animal fat", "🥩"],
+      mushroom: ["Houba", "🍄"],
+      bandage: ["Bandage", "🩹"],
+      waterBottle: ["Water bottle", "💧"],
+      torch: ["Louč", "🔥"],
+      rock: ["Kámen tool", "🪨"],
+      hatchet: ["Hatchet", "🪓"],
+      pickaxe: ["Pickaxe", "⛏"],
+      spear: ["Spear", "🔱"],
+      bow: ["Bow", "🏹"],
+      buildingPlan: ["Building plan", "📐"],
+      campfire: ["Campfire", "🔥"],
+      sleepingBag: ["Sleeping bag", "🛌"],
+      storageBox: ["Storage box", "📦"]
+    };
+
+    const hotbar = [
+      { id: "rock", icon: "🪨", name: "Rock", damage: 13, harvest: 1 },
+      { id: "torch", icon: "🔥", name: "Torch", damage: 10, harvest: 0.75 },
+      { id: "hatchet", icon: "🪓", name: "Hatchet", damage: 22, harvest: 1.9, woodBonus: 1.8 },
+      { id: "pickaxe", icon: "⛏", name: "Pickaxe", damage: 21, harvest: 2.0, oreBonus: 1.9 },
+      { id: "spear", icon: "🔱", name: "Spear", damage: 34, harvest: 0.8 },
+      { id: "bow", icon: "🏹", name: "Bow", damage: 28, harvest: 0.45 }
+    ];
+
+    const recipes = [
+      { id: "hatchet", icon: "🪓", name: "Stone Hatchet", desc: "Rychlé dřevo a základní boj.", cost: { wood: 90, stone: 55 } },
+      { id: "pickaxe", icon: "⛏", name: "Stone Pickaxe", desc: "Lepší kámen, metal a sulfur.", cost: { wood: 80, stone: 85 } },
+      { id: "spear", icon: "🔱", name: "Wooden Spear", desc: "Bezpečnější boj na krátkou vzdálenost.", cost: { wood: 150 } },
+      { id: "bow", icon: "🏹", name: "Hunting Bow", desc: "Experimentální ranged slot.", cost: { wood: 170, cloth: 35 } },
+      { id: "bandage", icon: "🩹", name: "Bandage", desc: "Rychlé léčení krvácení a HP.", cost: { cloth: 8 }, amount: 2 },
+      { id: "campfire", icon: "🔥", name: "Campfire", desc: "Teplo, sušení a orientační bod.", cost: { wood: 90, stone: 30 } },
+      { id: "sleepingBag", icon: "🛌", name: "Sleeping Bag", desc: "Nastaví respawn point.", cost: { cloth: 35 } },
+      { id: "storageBox", icon: "📦", name: "Storage Box", desc: "Dekorační bedna pro základnu.", cost: { wood: 120 } },
+      { id: "metalFragments", icon: "🔩", name: "Smelt fragments", desc: "Zjednodušené tavení ore na fragmenty.", cost: { metalOre: 30, lowGradeFuel: 2 }, amount: 18 }
+    ];
+
+    const buildPieces = [
+      { id: "foundation", icon: "▣", name: "Foundation", desc: "6x6 základna", cost: { wood: 90 }, size: [6, 0.4, 6], radius: 3.5 },
+      { id: "wall", icon: "▥", name: "Wall", desc: "Dřevěná stěna", cost: { wood: 55 }, size: [6, 3.3, 0.35], radius: 2.8 },
+      { id: "doorframe", icon: "▤", name: "Doorframe", desc: "Stěna s průchodem", cost: { wood: 65 }, size: [6, 3.3, 0.35], radius: 2.8 },
+      { id: "roof", icon: "▔", name: "Roof", desc: "Strop / roof tile", cost: { wood: 70 }, size: [6, 0.35, 6], radius: 3.5 },
+      { id: "campfire", icon: "🔥", name: "Campfire", desc: "Použije craft item", cost: { campfire: 1 }, radius: 1.4 },
+      { id: "sleepingBag", icon: "🛌", name: "Sleeping Bag", desc: "Použije craft item", cost: { sleepingBag: 1 }, radius: 2.0 },
+      { id: "storageBox", icon: "📦", name: "Storage Box", desc: "Použije craft item", cost: { storageBox: 1 }, radius: 1.8 }
+    ];
+
+    function $(id) {
+      return document.getElementById(id);
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function randInt(min, max) {
+      return Math.floor(rand(min, max + 1));
+    }
+
+    function dist2(x1, z1, x2, z2) {
+      return Math.hypot(x1 - x2, z1 - z2);
+    }
+
+    function hash(x, z) {
+      const n = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+
+    function smoothNoise(x, z) {
+      const ix = Math.floor(x);
+      const iz = Math.floor(z);
+      const fx = x - ix;
+      const fz = z - iz;
+      const a = hash(ix, iz);
+      const b = hash(ix + 1, iz);
+      const c = hash(ix, iz + 1);
+      const d = hash(ix + 1, iz + 1);
+      const ux = fx * fx * (3 - 2 * fx);
+      const uz = fz * fz * (3 - 2 * fz);
+      return lerp(lerp(a, b, ux), lerp(c, d, ux), uz);
+    }
+
+    function terrainHeightRaw(x, z) {
+      const dist = Math.hypot(x, z);
+      const falloff = clamp(1 - Math.pow(dist / WORLD_RADIUS, 4), 0, 1);
+      const n1 = (smoothNoise(x * 0.016, z * 0.016) - 0.5) * 11.5;
+      const n2 = (smoothNoise(x * 0.038 + 44, z * 0.038 - 22) - 0.5) * 4.6;
+      const n3 = (smoothNoise(x * 0.082 - 19, z * 0.082 + 51) - 0.5) * 1.8;
+      const hillA = 18 * Math.exp(-((x - 170) ** 2 + (z - 128) ** 2) / 9000);
+      const hillB = 15 * Math.exp(-((x + 210) ** 2 + (z + 85) ** 2) / 6800);
+      let shaped = n1 + n2 + n3 + hillA + hillB;
+
+      mountainZones.forEach(function (zone) {
+        shaped += ellipticalInfluence(x, z, zone) * zone.height;
+      });
+
+      valleyZones.forEach(function (zone) {
+        shaped += ellipticalInfluence(x, z, zone) * zone.depth;
+      });
+
+      return shaped * falloff - (1 - falloff) * 10;
+    }
+
+    function terrainHeight(x, z) {
+      const dist = Math.hypot(x, z);
+      const falloff = clamp(1 - Math.pow(dist / WORLD_RADIUS, 4), 0, 1);
+      let height = terrainHeightRaw(x, z);
+      const riverDist = nearestPathDistance(x, z, riverPaths);
+
+      if (riverDist < 28) {
+        const carved = Math.pow(1 - riverDist / 28, 1.8);
+        height -= carved * 5.7;
+      }
+
+      if (riverDist > 13 && riverDist < 24) {
+        const bankRise = 1 - Math.abs(riverDist - 18.5) / 5.5;
+        height += clamp(bankRise, 0, 1) * 1.2;
+      }
+
+      ponds.forEach(function (pond) {
+        const d = dist2(x, z, pond.x, pond.z);
+
+        if (d < pond.r + 14) {
+          const basin = 1 - d / (pond.r + 14);
+          height -= basin * 3.4;
+        }
+      });
+
+      if (dist > WORLD_RADIUS * 0.84) {
+        const beach = clamp((dist - WORLD_RADIUS * 0.84) / (WORLD_RADIUS * 0.14), 0, 1);
+        height = lerp(height, -2.4 - beach * 2.2, beach * 0.72);
+      }
+
+      height = applyTerrainStamps(x, z, height);
+      return height * falloff - (1 - falloff) * 2.5;
+    }
+
+    function surfaceHeight(x, z) {
+      const bridge = getBridgeAt(x, z, 0);
+      if (bridge) return bridge.y + 0.55;
+      const depth = waterDepthAt(x, z);
+
+      if (depth > 0.2) {
+        return Math.max(terrainHeight(x, z), waterSurfaceHeightAt(x, z) - (depth > 0.85 ? 0.48 : 0.22));
+      }
+
+      return terrainHeight(x, z);
+    }
+
+    function ellipticalInfluence(x, z, zone) {
+      const local = rotate(x - zone.x, z - zone.z, -zone.angle);
+      const value = (local.x * local.x) / (zone.rx * zone.rx) + (local.z * local.z) / (zone.rz * zone.rz);
+
+      if (value >= 1) return 0;
+
+      const t = 1 - value;
+      return t * t * (3 - 2 * t);
+    }
+
+    function mountainInfluenceAt(x, z) {
+      let influence = 0;
+
+      mountainZones.forEach(function (zone) {
+        influence = Math.max(influence, ellipticalInfluence(x, z, zone));
+      });
+
+      return influence;
+    }
+
+    function applyTerrainStamps(x, z, height) {
+      let output = height;
+
+      terrainStamps.forEach(function (stamp) {
+        const local = rotate(x - stamp.x, z - stamp.z, -stamp.angle);
+        const dx = Math.abs(local.x) - stamp.width * 0.5;
+        const dz = Math.abs(local.z) - stamp.depth * 0.5;
+        const outside = Math.hypot(Math.max(dx, 0), Math.max(dz, 0));
+
+        if (dx <= 0 && dz <= 0) {
+          output = lerp(output, stamp.y, 0.94);
+          return;
+        }
+
+        if (outside < stamp.blend) {
+          const t = 1 - outside / stamp.blend;
+          const smooth = t * t * (3 - 2 * t);
+          output = lerp(output, stamp.y, smooth * 0.72);
+        }
+      });
+
+      return output;
+    }
+
+    function nearestPointOnPaths(x, z, paths) {
+      let best = {
+        x: 0,
+        z: 0,
+        distance: Infinity
+      };
+
+      paths.forEach(function (path) {
+        for (let i = 0; i < path.length - 1; i++) {
+          const a = path[i];
+          const b = path[i + 1];
+          const dx = b.x - a.x;
+          const dz = b.z - a.z;
+          const len = dx * dx + dz * dz || 1;
+          const t = clamp(((x - a.x) * dx + (z - a.z) * dz) / len, 0, 1);
+          const px = a.x + dx * t;
+          const pz = a.z + dz * t;
+          const d = dist2(x, z, px, pz);
+
+          if (d < best.distance) {
+            best = {
+              x: px,
+              z: pz,
+              distance: d
+            };
+          }
+        }
+      });
+
+      return best;
+    }
+
+    function waterSurfaceHeightAt(x, z) {
+      const riverPoint = nearestPointOnPaths(x, z, riverPaths);
+      let waterY = Infinity;
+
+      if (riverPoint.distance < 18) {
+        waterY = terrainHeightRaw(riverPoint.x, riverPoint.z) - 2.1;
+      }
+
+      ponds.forEach(function (pond) {
+        const d = dist2(x, z, pond.x, pond.z);
+
+        if (d < pond.r + 2) {
+          waterY = Math.min(waterY, terrainHeightRaw(pond.x, pond.z) - 1.0);
+        }
+      });
+
+      if (Math.hypot(x, z) > WORLD_RADIUS - 12) {
+        waterY = Math.min(waterY, -4.4);
+      }
+
+      if (waterY === Infinity) {
+        return terrainHeight(x, z) + 0.15;
+      }
+
+      return waterY;
+    }
+
+    function cacheUi() {
+      [
+        "menuOverlay", "gameHud", "startGameButton", "continueButton", "resetSaveButton",
+        "presetLow", "presetHigh", "hpBar", "foodBar", "waterBar", "staminaBar",
+        "radBar", "hpText", "foodText", "waterText", "staminaText", "radText",
+        "surfaceReadout", "statusReadout", "targetPanel", "targetName", "targetHint",
+        "feed", "centerMessage", "hotbar", "topCompass", "compassLabel", "compassTrack",
+        "miniMapCanvas", "inventoryOverlay", "buildOverlay", "mapOverlay", "settingsOverlay",
+        "pauseOverlay", "inventoryGrid", "craftingGrid", "buildGrid", "bigMapCanvas",
+        "clearWaypointButton", "renderScaleInput", "renderScaleLabel", "densityInput",
+        "densityLabel", "toggleShadows", "toggleFog", "toggleBob", "saveButton",
+        "resumeButton", "pauseSaveButton", "pauseInventoryButton", "pauseMapButton",
+        "pauseSettingsButton", "returnMenuButton"
+      ].forEach(function (id) {
+        ui[id] = $(id);
+      });
+    }
+
+    function bindUi() {
+      ui.startGameButton.addEventListener("click", function () {
+        state.pendingLoad = false;
+        startGame();
+      });
+
+      ui.continueButton.addEventListener("click", function () {
+        state.pendingLoad = true;
+        startGame();
+      });
+
+      ui.resetSaveButton.addEventListener("click", function () {
+        localStorage.removeItem(SAVE_KEY);
+        showMenuNote("Save smazaný.");
+        renderMenuSaveState();
+      });
+
+      ui.presetLow.addEventListener("click", function () {
+        settings.shadows = false;
+        settings.fog = true;
+        settings.renderScale = 0.75;
+        settings.density = 0;
+        syncSettingsUi();
+        applySettings();
+        showMenuNote("Low preset nastavený.");
+      });
+
+      ui.presetHigh.addEventListener("click", function () {
+        settings.shadows = true;
+        settings.fog = true;
+        settings.renderScale = 1;
+        settings.density = 2;
+        syncSettingsUi();
+        applySettings();
+        showMenuNote("High preset nastavený.");
+      });
+
+      document.querySelectorAll("[data-close]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          closePanel(button.dataset.close);
+        });
+      });
+
+      ui.clearWaypointButton.addEventListener("click", function () {
+        state.waypoint = null;
+        drawBigMap();
+        showMessage("Waypoint smazaný.");
+      });
+
+      ui.bigMapCanvas.addEventListener("click", function (event) {
+        const rect = ui.bigMapCanvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width * ui.bigMapCanvas.width;
+        const y = (event.clientY - rect.top) / rect.height * ui.bigMapCanvas.height;
+        const world = mapToWorld(x, y, ui.bigMapCanvas.width);
+        state.waypoint = { x: world.x, z: world.z };
+        drawBigMap();
+        showMessage("Waypoint nastavený.");
+      });
+
+      ui.renderScaleInput.addEventListener("input", function () {
+        settings.renderScale = Number(ui.renderScaleInput.value);
+        syncSettingsUi();
+        applySettings();
+      });
+
+      ui.densityInput.addEventListener("input", function () {
+        settings.density = Number(ui.densityInput.value);
+        syncSettingsUi();
+      });
+
+      ui.toggleShadows.addEventListener("click", function () {
+        settings.shadows = !settings.shadows;
+        syncSettingsUi();
+        applySettings();
+      });
+
+      ui.toggleFog.addEventListener("click", function () {
+        settings.fog = !settings.fog;
+        syncSettingsUi();
+        applySettings();
+      });
+
+      ui.toggleBob.addEventListener("click", function () {
+        settings.bob = !settings.bob;
+        syncSettingsUi();
+      });
+
+      ui.saveButton.addEventListener("click", function () {
+        saveGame();
+      });
+
+      ui.pauseSaveButton.addEventListener("click", saveGame);
+      ui.resumeButton.addEventListener("click", resumeGame);
+      ui.pauseInventoryButton.addEventListener("click", function () { openPanel("inventoryOverlay"); });
+      ui.pauseMapButton.addEventListener("click", function () { openPanel("mapOverlay"); });
+      ui.pauseSettingsButton.addEventListener("click", function () { openPanel("settingsOverlay"); });
+      ui.returnMenuButton.addEventListener("click", returnToMenu);
+
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", function (event) {
+        keys[event.code] = false;
+      });
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mousedown", function (event) {
+        if (event.button === 0 && state.started && !state.paused && !state.inMenu) {
+          primaryAction();
+        }
+      });
+
+      window.addEventListener("resize", onResize);
+    }
+
+    function showMenuNote(text) {
+      ui.continueButton.textContent = text;
+      setTimeout(renderMenuSaveState, 1200);
+    }
+
+    function renderMenuSaveState() {
+      ui.continueButton.textContent = localStorage.getItem(SAVE_KEY) ? "Pokračovat" : "Pokračovat (není save)";
+    }
+
+    function startGame() {
+      ui.menuOverlay.classList.add("hidden");
+      ui.gameHud.classList.remove("hidden");
+      state.inMenu = false;
+      state.paused = false;
+
+      if (!state.started) {
+        initGame();
+      }
+
+      if (state.pendingLoad) {
+        loadGame();
+        state.pendingLoad = false;
+      }
+
+      state.started = true;
+      renderAllUi();
+      showMessage("Farken’s World – Beta 0.7.0");
+      requestPointerLockSoon();
+    }
+
+    function initGame() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x88b5dc);
+      scene.fog = new THREE.Fog(0x88b5dc, 145, 760);
+      camera = new THREE.PerspectiveCamera(78, window.innerWidth / window.innerHeight, 0.1, 1200);
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(devicePixelRatioForSettings());
+      renderer.shadowMap.enabled = settings.shadows;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.body.appendChild(renderer.domElement);
+      clock = new THREE.Clock();
+      miniMapCtx = ui.miniMapCanvas.getContext("2d");
+      bigMapCtx = ui.bigMapCanvas.getContext("2d");
+
+      createCompass();
+      createMaterials();
+      createLights();
+      createWorld();
+      createHeldTool();
+      createBuildGhost();
+      placePlayer(-24, 32);
+      applySettings();
+      animate();
+    }
+
+    function createMaterials() {
+      materials.grass = mat(0x4f7c39, 0.95);
+      materials.grassDark = mat(0x3b652d, 1);
+      materials.dirt = mat(0x5c5037, 1);
+      materials.road = mat(0x31343a, 1);
+      materials.roadLine = mat(0xc6a54e, 0.75);
+      materials.water = new THREE.MeshStandardMaterial({ color: 0x2f9ed2, roughness: 0.18, metalness: 0, transparent: true, opacity: 0.86 });
+      materials.deepWater = new THREE.MeshStandardMaterial({ color: 0x125f91, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.92 });
+      materials.foam = new THREE.MeshBasicMaterial({ color: 0xcdeaf4, transparent: true, opacity: 0.34, side: THREE.DoubleSide });
+      materials.wetBank = mat(0x5f684f, 0.96);
+      materials.sand = mat(0x927c53, 1);
+      materials.wood = textureMaterial(makeWoodTexture(0x6d4728, 0x2f1f14), 0.9);
+      materials.woodDark = textureMaterial(makeWoodTexture(0x49301d, 0x24170f), 0.98);
+      materials.stone = mat(0x6f7775, 0.94);
+      materials.metal = mat(0x5f666c, 0.7, 0.15);
+      materials.scrap = mat(0x8d806f, 0.86, 0.1);
+      materials.sulfur = mat(0xd8c24f, 0.88);
+      materials.hemp = mat(0x6abf6e, 0.98);
+      materials.cloth = mat(0x8a7863, 0.92);
+      materials.red = textureMaterial(makeBarrelTexture(0xa83c30, 0x431a18), 0.82, 0.08);
+      materials.blue = textureMaterial(makeBarrelTexture(0x3e779c, 0x142d3e), 0.78, 0.06);
+      materials.yellow = textureMaterial(makeBarrelTexture(0xbe9230, 0x4d3512), 0.78, 0.06);
+      materials.green = mat(0x4f7448, 0.82);
+      materials.leaves = textureMaterial(makeLeafTexture(0x345d2b, 0x6a9a48), 1);
+      materials.grassBlade = textureMaterial(makeLeafTexture(0x3c7a35, 0x77aa52), 1);
+      materials.cloud = new THREE.MeshBasicMaterial({ map: makeCloudTexture(), transparent: true, opacity: 0.82 });
+      materials.wolfFur = textureMaterial(makeFurTexture(0x5f6768, 0x252a2c), 0.96);
+      materials.boarFur = textureMaterial(makeFurTexture(0x5c3f2a, 0x23160e), 0.96);
+      materials.deerFur = textureMaterial(makeFurTexture(0x8a6a43, 0x3d2818), 0.96);
+      materials.radiation = new THREE.MeshBasicMaterial({ color: 0x87e44d, transparent: true, opacity: 0.16, side: THREE.DoubleSide });
+      materials.ghostOk = new THREE.MeshStandardMaterial({ color: 0x70d17f, transparent: true, opacity: 0.45 });
+      materials.ghostBad = new THREE.MeshStandardMaterial({ color: 0xef5b48, transparent: true, opacity: 0.45 });
+    }
+
+    function mat(color, roughness, metalness) {
+      const material = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: roughness === undefined ? 0.9 : roughness,
+        metalness: metalness || 0
+      });
+      return material;
+    }
+
+    function textureMaterial(texture, roughness, metalness) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 4;
+
+      return new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: roughness === undefined ? 0.9 : roughness,
+        metalness: metalness || 0
+      });
+    }
+
+    function makeTexture(size, painter) {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      painter(ctx, size);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    function colorString(hex) {
+      return "#" + hex.toString(16).padStart(6, "0");
+    }
+
+    function makeWoodTexture(base, dark) {
+      return makeTexture(96, function (ctx, size) {
+        ctx.fillStyle = colorString(base);
+        ctx.fillRect(0, 0, size, size);
+
+        for (let x = 0; x < size; x += 7) {
+          const wobble = Math.sin(x * 0.35) * 3;
+          ctx.strokeStyle = x % 14 === 0 ? colorString(dark) : "rgba(255, 220, 150, 0.12)";
+          ctx.lineWidth = x % 14 === 0 ? 2 : 1;
+          ctx.beginPath();
+          ctx.moveTo(x + wobble, 0);
+
+          for (let y = 0; y <= size; y += 12) {
+            ctx.lineTo(x + Math.sin(y * 0.18 + x) * 4, y);
+          }
+
+          ctx.stroke();
+        }
+
+        for (let i = 0; i < 18; i++) {
+          ctx.fillStyle = "rgba(20, 12, 8, 0.16)";
+          ctx.beginPath();
+          ctx.ellipse(rand(0, size), rand(0, size), rand(3, 8), rand(1, 3), rand(0, Math.PI), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function makeLeafTexture(dark, light) {
+      return makeTexture(96, function (ctx, size) {
+        ctx.fillStyle = colorString(dark);
+        ctx.fillRect(0, 0, size, size);
+
+        for (let i = 0; i < 80; i++) {
+          const x = rand(0, size);
+          const y = rand(0, size);
+          ctx.fillStyle = i % 3 === 0 ? colorString(light) : "rgba(12, 38, 16, 0.35)";
+          ctx.beginPath();
+          ctx.ellipse(x, y, rand(2, 6), rand(1, 3), rand(0, Math.PI), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function makeBarrelTexture(base, dark) {
+      return makeTexture(96, function (ctx, size) {
+        ctx.fillStyle = colorString(base);
+        ctx.fillRect(0, 0, size, size);
+
+        for (let y = 10; y < size; y += 24) {
+          ctx.fillStyle = colorString(dark);
+          ctx.fillRect(0, y, size, 4);
+        }
+
+        for (let x = 0; x < size; x += 16) {
+          ctx.fillStyle = "rgba(255,255,255,0.1)";
+          ctx.fillRect(x, 0, 3, size);
+        }
+
+        for (let i = 0; i < 40; i++) {
+          ctx.fillStyle = "rgba(0,0,0,0.12)";
+          ctx.fillRect(rand(0, size), rand(0, size), rand(1, 4), rand(1, 5));
+        }
+      });
+    }
+
+    function makeCloudTexture() {
+      return makeTexture(96, function (ctx, size) {
+        const gradient = ctx.createRadialGradient(size * 0.45, size * 0.42, 5, size * 0.5, size * 0.5, size * 0.52);
+        gradient.addColorStop(0, "rgba(255,255,255,0.92)");
+        gradient.addColorStop(0.6, "rgba(226,236,246,0.72)");
+        gradient.addColorStop(1, "rgba(180,195,210,0.2)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        for (let i = 0; i < 18; i++) {
+          ctx.fillStyle = "rgba(255,255,255,0.2)";
+          ctx.beginPath();
+          ctx.arc(rand(12, size - 12), rand(12, size - 12), rand(4, 13), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function makeFurTexture(base, dark) {
+      return makeTexture(96, function (ctx, size) {
+        ctx.fillStyle = colorString(base);
+        ctx.fillRect(0, 0, size, size);
+
+        for (let i = 0; i < 120; i++) {
+          ctx.strokeStyle = i % 4 === 0 ? colorString(dark) : "rgba(255,255,255,0.13)";
+          ctx.lineWidth = 1;
+          const x = rand(0, size);
+          const y = rand(0, size);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + rand(-7, 7), y + rand(2, 10));
+          ctx.stroke();
+        }
+      });
+    }
+
+    function createLights() {
+      ambientLight = new THREE.HemisphereLight(0xcfe7ff, 0x304025, 0.78);
+      scene.add(ambientLight);
+      sunLight = new THREE.DirectionalLight(0xfff1ca, 2.2);
+      sunLight.position.set(140, 250, 80);
+      sunLight.castShadow = settings.shadows;
+      sunLight.shadow.mapSize.set(2048, 2048);
+      sunLight.shadow.camera.left = -420;
+      sunLight.shadow.camera.right = 420;
+      sunLight.shadow.camera.top = 420;
+      sunLight.shadow.camera.bottom = -420;
+      sunLight.shadow.camera.near = 1;
+      sunLight.shadow.camera.far = 700;
+      scene.add(sunLight);
+    }
+
+    function createWorld() {
+      createPathData();
+      prepareTerrainForms();
+      createTerrain();
+      createOcean();
+      createRiver();
+      createRoads();
+      createBridges();
+      generateTerrainAuditSamples();
+      createPonds();
+      createMonuments();
+      createResources();
+      createGroundDetails();
+      createAnimals();
+      createClouds();
+    }
+
+    function createPathData() {
+      roads.length = 0;
+      riverPaths.length = 0;
+      ponds.length = 0;
+      bridges.length = 0;
+      markers.length = 0;
+      monuments.length = 0;
+      terrainStamps.length = 0;
+      mountainZones.length = 0;
+      valleyZones.length = 0;
+      waterPlanes.length = 0;
+      terrainAuditSamples.length = 0;
+
+      roads.push(spline([
+        [-325, -196], [-250, -170], [-170, -135], [-86, -91], [-12, -42],
+        [72, 12], [144, 54], [225, 105], [310, 154]
+      ], 16));
+      roads.push(spline([
+        [-72, -86], [-128, -18], [-175, 55], [-208, 132], [-245, 225]
+      ], 14));
+      roads.push(spline([
+        [78, 12], [40, 98], [12, 170], [-28, 250]
+      ], 14));
+      roads.push(spline([
+        [138, 50], [196, -18], [250, -88], [306, -170]
+      ], 13));
+
+      riverPaths.push(spline([
+        [-280, -130], [-215, -102], [-146, -82], [-84, -43], [-18, -18],
+        [42, 0], [103, 22], [166, 55], [233, 82], [300, 116]
+      ], 18));
+      riverPaths.push(spline([
+        [-40, 245], [-10, 182], [25, 123], [52, 62], [88, 8]
+      ], 15));
+
+      ponds.push({ x: -248, z: 104, r: 26 });
+      ponds.push({ x: 226, z: -142, r: 31 });
+      ponds.push({ x: 178, z: 212, r: 22 });
+    }
+
+    function prepareTerrainForms() {
+      addMountainZone("north-ridge", -230, -230, 78, 52, 31, -0.35);
+      addMountainZone("western-spine", -295, 20, 92, 46, 24, 0.45);
+      addMountainZone("east-peak", 214, -188, 66, 56, 28, -0.22);
+      addMountainZone("south-hills", 112, 238, 94, 58, 22, 0.18);
+      addMountainZone("central-lookout", 54, 92, 50, 38, 16, 0.05);
+
+      addValleyZone("river-basin-west", -130, -54, 150, 55, -5.8, 0.72);
+      addValleyZone("river-basin-east", 144, 44, 180, 58, -5.2, 0.42);
+      addValleyZone("south-stream-cut", 22, 155, 92, 42, -4.4, -0.25);
+
+      addTerrainStamp("Warehouse pad", -145, -132, 0.12, 48, 38, 18, 0.1);
+      addTerrainStamp("Gas station pad", 112, 34, 0.58, 46, 32, 18, 0.05);
+      addTerrainStamp("Harbor pad", 258, 110, -0.3, 62, 42, 24, -0.18);
+      addTerrainStamp("Dome pad", 212, -155, 0, 52, 52, 22, 0.08);
+      addTerrainStamp("Outpost pad", -238, 170, 0.28, 56, 46, 20, 0.05);
+      addTerrainStamp("Supermarket pad", -22, 178, -0.12, 46, 34, 17, 0.04);
+      addTerrainStamp("Lighthouse pad", 292, -220, 0, 34, 34, 16, 0.15);
+
+      ponds.forEach(function (pond, index) {
+        addTerrainStamp("Pond basin " + index, pond.x, pond.z, 0, pond.r * 2.35, pond.r * 2.35, 16, -1.9);
+      });
+
+      generateTerrainAuditSamples();
+    }
+
+    function addMountainZone(name, x, z, rx, rz, height, angle) {
+      mountainZones.push({ name: name, x: x, z: z, rx: rx, rz: rz, height: height, angle: angle });
+    }
+
+    function addValleyZone(name, x, z, rx, rz, depth, angle) {
+      valleyZones.push({ name: name, x: x, z: z, rx: rx, rz: rz, depth: depth, angle: angle });
+    }
+
+    function addTerrainStamp(name, x, z, angle, width, depth, blend, yOffset) {
+      terrainStamps.push({
+        name: name,
+        x: x,
+        z: z,
+        angle: angle,
+        width: width,
+        depth: depth,
+        blend: blend,
+        y: terrainHeightRaw(x, z) + (yOffset || 0)
+      });
+    }
+
+    function generateTerrainAuditSamples() {
+      terrainAuditSamples.length = 0;
+
+      authoredTerrainAuditSamples.forEach(function (sample) {
+        terrainAuditSamples.push({
+          name: sample.name,
+          x: sample.x,
+          z: sample.z,
+          kind: sample.kind
+        });
+      });
+
+      for (let z = -330; z <= 330; z += 30) {
+        for (let x = -330; x <= 330; x += 30) {
+          if (Math.hypot(x, z) > WORLD_RADIUS - 8) continue;
+
+          terrainAuditSamples.push({
+            name: "grid " + x + " " + z,
+            x: x,
+            z: z,
+            kind: "grid"
+          });
+        }
+      }
+
+      riverPaths.forEach(function (path, pathIndex) {
+        path.forEach(function (point, index) {
+          if (index % 4 !== 0) return;
+
+          const prev = path[Math.max(0, index - 1)];
+          const next = path[Math.min(path.length - 1, index + 1)];
+          const dx = next.x - prev.x;
+          const dz = next.z - prev.z;
+          const len = Math.hypot(dx, dz) || 1;
+          const nx = -dz / len;
+          const nz = dx / len;
+
+          [-22, -18, -14, -10, 0, 10, 14, 18, 22].forEach(function (offset) {
+            terrainAuditSamples.push({
+              name: "river " + pathIndex + " " + index + " offset " + offset,
+              x: point.x + nx * offset,
+              z: point.z + nz * offset,
+              kind: offset === 0 ? "river-center" : Math.abs(offset) <= 14 ? "river-water-edge" : "river-bank"
+            });
+          });
+        });
+      });
+
+      bridges.forEach(function (bridge, index) {
+        terrainAuditSamples.push({
+          name: "bridge " + index + " center",
+          x: bridge.x,
+          z: bridge.z,
+          kind: "bridge"
+        });
+      });
+    }
+
+    function spline(points, steps) {
+      const out = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[Math.max(0, i - 1)];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[Math.min(points.length - 1, i + 2)];
+        for (let s = 0; s < steps; s++) {
+          const t = s / steps;
+          const t2 = t * t;
+          const t3 = t2 * t;
+          const x = 0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2*p0[0] - 5*p1[0] + 4*p2[0] - p3[0]) * t2 + (-p0[0] + 3*p1[0] - 3*p2[0] + p3[0]) * t3);
+          const z = 0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2*p0[1] - 5*p1[1] + 4*p2[1] - p3[1]) * t2 + (-p0[1] + 3*p1[1] - 3*p2[1] + p3[1]) * t3);
+          out.push({ x, z });
+        }
+      }
+      const last = points[points.length - 1];
+      out.push({ x: last[0], z: last[1] });
+      return out;
+    }
+
+    function createTerrain() {
+      const segments = 130;
+      const geometry = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, segments, segments);
+      geometry.rotateX(-Math.PI / 2);
+      const pos = geometry.attributes.position;
+      const colors = [];
+      const color = new THREE.Color();
+
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const y = terrainHeight(x, z);
+        pos.setY(i, y);
+        const d = Math.hypot(x, z);
+        const riverDistance = nearestPathDistance(x, z, riverPaths);
+        const depth = waterDepthAt(x, z);
+        const mountain = mountainInfluenceAt(x, z);
+
+        if (depth > 0.2) color.setHex(depth > 0.85 ? 0x1d4f68 : 0x286f78);
+        else if (d > WORLD_RADIUS * 0.91) color.setHex(0x9a835c);
+        else if (riverDistance < 18) color.setHex(0x677052);
+        else if (riverDistance < 31) color.setHex(0x7b714e);
+        else if (mountain > 0.5 || y > 24) color.setHex(0x6f776c);
+        else if (y > 14) color.setHex(0x607a42);
+        else color.setHex(hash(Math.floor(x / 24), Math.floor(z / 24)) > 0.45 ? 0x4f7c39 : 0x416d32);
+        colors.push(color.r, color.g, color.b);
+      }
+
+      geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
+      const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+      terrainMesh = new THREE.Mesh(geometry, material);
+      terrainMesh.receiveShadow = true;
+      scene.add(terrainMesh);
+    }
+
+    function createOcean() {
+      const ocean = new THREE.Mesh(new THREE.CircleGeometry(WORLD_RADIUS + 90, 96), materials.deepWater);
+      ocean.rotation.x = -Math.PI / 2;
+      ocean.position.y = -6.6;
+      scene.add(ocean);
+      animated.push({ type: "water", object: ocean });
+    }
+
+    function createRiver() {
+      riverPaths.forEach(function (path, index) {
+        const bank = createRibbon(path, 46, materials.sand, 0.025);
+        scene.add(bank);
+
+        const wetBank = createRibbon(path, 38, materials.wetBank, 0.055);
+        scene.add(wetBank);
+
+        const waterFloor = createWaterRibbon(path, 37, materials.deepWater, -0.04);
+        scene.add(waterFloor);
+
+        const shallow = createWaterRibbon(path, 35, materials.water, 0.02);
+        scene.add(shallow);
+
+        const foam = createWaterRibbon(path, 33, materials.foam, 0.05);
+        scene.add(foam);
+
+        const deep = createWaterRibbon(path, 12.5, materials.deepWater, 0.06);
+        scene.add(deep);
+        waterPlanes.push(waterFloor, shallow, foam, deep);
+        animated.push({ type: "water", object: shallow });
+        animated.push({ type: "water", object: deep });
+        animated.push({ type: "foam", object: foam });
+        const mid = path[Math.floor(path.length / 2)];
+        markers.push({ x: mid.x, z: mid.z, kind: "water", label: index === 0 ? "River" : "Stream" });
+      });
+    }
+
+    function createRoads() {
+      roads.forEach(function (path, index) {
+        const dirt = createRibbon(path, 18, materials.dirt, 0.16);
+        const road = createRibbon(path, 10.5, materials.road, 0.2);
+        const line = createRibbon(path, 0.7, materials.roadLine, 0.235);
+        scene.add(dirt, road, line);
+        const mid = path[Math.floor(path.length / 2)];
+        markers.push({ x: mid.x, z: mid.z, kind: "road", label: index === 0 ? "Main road" : "Road" });
+      });
+    }
+
+    function createBridges() {
+      roads.forEach(function (road) {
+        let open = -1;
+        for (let i = 0; i < road.length; i++) {
+          const p = road[i];
+          const overWater = nearestPathDistance(p.x, p.z, riverPaths) < 18;
+          if (overWater && open === -1) open = i;
+          if ((!overWater || i === road.length - 1) && open !== -1) {
+            const end = overWater ? i : i - 1;
+            if (end - open > 2) {
+              const a = road[Math.max(0, open - 3)];
+              const b = road[Math.min(road.length - 1, end + 3)];
+              const mid = road[Math.floor((open + end) / 2)];
+              const angle = Math.atan2(b.x - a.x, b.z - a.z);
+              addBridge(mid.x, mid.z, angle, clamp((end - open) * 2.5, 18, 40), 13.5);
+            }
+            open = -1;
+          }
+        }
+      });
+    }
+
+    function addBridge(x, z, angle, length, width) {
+      if (bridges.some(function (b) { return dist2(b.x, b.z, x, z) < 18; })) return;
+      const y = terrainHeight(x, z) + 0.7;
+      const bridge = { x, z, angle, length, width, y };
+      bridges.push(bridge);
+
+      const group = new THREE.Group();
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(width, 0.45, length), materials.woodDark);
+      deck.position.y = 0.25;
+      deck.castShadow = settings.shadows;
+      deck.receiveShadow = true;
+      group.add(deck);
+
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, length * 0.84), materials.roadLine);
+      stripe.position.y = 0.52;
+      group.add(stripe);
+
+      for (let side = -1; side <= 1; side += 2) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.75, length), materials.wood);
+        rail.position.set(side * (width * 0.5 - 0.35), 0.86, 0);
+        group.add(rail);
+      }
+
+      group.position.set(x, y, z);
+      group.rotation.y = angle;
+      scene.add(group);
+      markers.push({ x, z, kind: "bridge", label: "Bridge" });
+    }
+
+    function createPonds() {
+      ponds.forEach(function (pond) {
+        const bank = new THREE.Mesh(new THREE.CircleGeometry(pond.r + 9, 54), materials.sand);
+        bank.rotation.x = -Math.PI / 2;
+        bank.position.set(pond.x, terrainHeight(pond.x, pond.z) + 0.08, pond.z);
+        scene.add(bank);
+
+        const floor = new THREE.Mesh(new THREE.CircleGeometry(pond.r + 1.5, 54), materials.deepWater);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(pond.x, waterSurfaceHeightAt(pond.x, pond.z) - 0.08, pond.z);
+        scene.add(floor);
+
+        const water = new THREE.Mesh(new THREE.CircleGeometry(pond.r, 54), materials.water);
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(pond.x, waterSurfaceHeightAt(pond.x, pond.z) + 0.04, pond.z);
+        scene.add(water);
+        waterPlanes.push(floor, water);
+        animated.push({ type: "water", object: water });
+        markers.push({ x: pond.x, z: pond.z, kind: "water", label: "Pond" });
+      });
+    }
+
+    function createRibbon(points, width, material, yOffset) {
+      const verts = [];
+      const uvs = [];
+      const indices = [];
+      for (let i = 0; i < points.length; i++) {
+        const prev = points[Math.max(0, i - 1)];
+        const next = points[Math.min(points.length - 1, i + 1)];
+        const dx = next.x - prev.x;
+        const dz = next.z - prev.z;
+        const len = Math.hypot(dx, dz) || 1;
+        const nx = -dz / len;
+        const nz = dx / len;
+        const lx = points[i].x + nx * width * 0.5;
+        const lz = points[i].z + nz * width * 0.5;
+        const rx = points[i].x - nx * width * 0.5;
+        const rz = points[i].z - nz * width * 0.5;
+        verts.push(lx, terrainHeight(lx, lz) + yOffset, lz);
+        verts.push(rx, terrainHeight(rx, rz) + yOffset, rz);
+        uvs.push(0, i / points.length, 1, i / points.length);
+      }
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = i * 2;
+        indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+      geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function createWaterRibbon(points, width, material, yOffset) {
+      const verts = [];
+      const uvs = [];
+      const indices = [];
+
+      for (let i = 0; i < points.length; i++) {
+        const prev = points[Math.max(0, i - 1)];
+        const next = points[Math.min(points.length - 1, i + 1)];
+        const dx = next.x - prev.x;
+        const dz = next.z - prev.z;
+        const len = Math.hypot(dx, dz) || 1;
+        const nx = -dz / len;
+        const nz = dx / len;
+        const lx = points[i].x + nx * width * 0.5;
+        const lz = points[i].z + nz * width * 0.5;
+        const rx = points[i].x - nx * width * 0.5;
+        const rz = points[i].z - nz * width * 0.5;
+        const centerWaterY = waterSurfaceHeightAt(points[i].x, points[i].z) + yOffset;
+
+        verts.push(lx, centerWaterY, lz);
+        verts.push(rx, centerWaterY, rz);
+        uvs.push(0, i / points.length, 1, i / points.length);
+      }
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = i * 2;
+        indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+      geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      material.side = THREE.DoubleSide;
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function createMonuments() {
+      addWarehouse(-145, -132, 0.12);
+      addGasStation(112, 34, 0.58);
+      addHarbor(258, 110, -0.3);
+      addDome(212, -155);
+      addOutpost(-238, 170, 0.28);
+      addSupermarket(-22, 178, -0.12);
+      addLighthouse(292, -220);
+    }
+
+    function addWarehouse(x, z, rot) {
+      const g = new THREE.Group();
+      addBox(g, 0, 0, 0, 32, 0.5, 24, materials.stone);
+      addBox(g, 0, 2.4, -12, 32, 4.8, 0.5, materials.metal);
+      addBox(g, -16, 2.4, 0, 0.5, 4.8, 24, materials.metal);
+      addBox(g, 16, 2.4, 0, 0.5, 4.8, 24, materials.metal);
+      addBox(g, -9, 2.4, 12, 10, 4.8, 0.5, materials.metal);
+      addBox(g, 10, 2.4, 12, 9, 4.8, 0.5, materials.metal);
+      addBox(g, 0, 5.1, 0, 34, 0.5, 25, materials.metal);
+      placeStructure(g, x, z, rot);
+      addMonument("Warehouse", x, z, rot, 28, true);
+      addLocalLoot(x, z, rot, -8, -4, "crate");
+      addLocalLoot(x, z, rot, 8, 4, "barrel");
+      addLocalLoot(x, z, rot, 1, 7, "military");
+    }
+
+    function addGasStation(x, z, rot) {
+      const g = new THREE.Group();
+      addBox(g, 0, 0, 0, 30, 0.35, 18, materials.stone);
+      addBox(g, 0, 2.1, -8, 30, 4.2, 0.4, materials.metal);
+      addBox(g, -15, 2.1, 0, 0.4, 4.2, 16, materials.metal);
+      addBox(g, 15, 2.1, 0, 0.4, 4.2, 16, materials.metal);
+      addBox(g, 0, 4.5, 0, 33, 0.45, 19, materials.red);
+      for (let i = -1; i <= 1; i += 2) {
+        addBox(g, i * 8, 1.0, 13, 2.2, 2, 1.2, materials.yellow);
+      }
+      placeStructure(g, x, z, rot);
+      addMonument("Gas station", x, z, rot, 30, false);
+      addLocalLoot(x, z, rot, -7, 7, "fuel");
+      addLocalLoot(x, z, rot, 4, -3, "barrel");
+    }
+
+    function addHarbor(x, z, rot) {
+      const g = new THREE.Group();
+      addBox(g, 0, 0.1, 0, 42, 0.35, 22, materials.stone);
+      addBox(g, -8, 2, -5, 20, 4, 12, materials.metal);
+      addBox(g, 18, 1.6, 2, 7, 3.2, 18, materials.wood);
+      for (let i = 0; i < 5; i++) addBox(g, -18 + i * 8, 0.55, 16, 4, 0.7, 15, materials.wood);
+      placeStructure(g, x, z, rot);
+      addMonument("Harbor", x, z, rot, 42, true);
+      addLocalLoot(x, z, rot, -14, -3, "crate");
+      addLocalLoot(x, z, rot, 12, 6, "military");
+      addLocalLoot(x, z, rot, 20, -6, "fuel");
+    }
+
+    function addDome(x, z) {
+      const g = new THREE.Group();
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(13, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), materials.metal);
+      dome.position.y = 0.5;
+      dome.castShadow = settings.shadows;
+      g.add(dome);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(14, 15, 2.2, 32), materials.stone);
+      base.position.y = 0.2;
+      g.add(base);
+      placeStructure(g, x, z, 0);
+      addMonument("Dome", x, z, 0, 34, true);
+      addLocalLoot(x, z, 0, 0, 14, "military");
+      addLocalLoot(x, z, 0, -8, -10, "crate");
+    }
+
+    function addOutpost(x, z, rot) {
+      const g = new THREE.Group();
+      addBox(g, 0, 0, 0, 38, 0.4, 28, materials.stone);
+      addBox(g, -14, 2.8, -8, 8, 5.6, 8, materials.wood);
+      addBox(g, 12, 2.8, 5, 10, 5.6, 12, materials.wood);
+      for (let i = 0; i < 4; i++) {
+        addBox(g, i < 2 ? -20 : 20, 4, i % 2 ? -15 : 15, 2, 8, 2, materials.woodDark);
+      }
+      placeStructure(g, x, z, rot);
+      addMonument("Outpost", x, z, rot, 36, false);
+      addLocalLoot(x, z, rot, -7, 3, "crate");
+      addLocalLoot(x, z, rot, 12, -2, "barrel");
+    }
+
+    function addSupermarket(x, z, rot) {
+      const g = new THREE.Group();
+      addBox(g, 0, 0, 0, 28, 0.35, 20, materials.stone);
+      addBox(g, 0, 2, -10, 28, 4, 0.4, materials.metal);
+      addBox(g, -14, 2, 0, 0.4, 4, 20, materials.metal);
+      addBox(g, 14, 2, 0, 0.4, 4, 20, materials.metal);
+      addBox(g, 0, 4.3, 0, 29, 0.35, 21, materials.blue);
+      placeStructure(g, x, z, rot);
+      addMonument("Supermarket", x, z, rot, 28, false);
+      addLocalLoot(x, z, rot, -6, -5, "crate");
+      addLocalLoot(x, z, rot, 7, 5, "barrel");
+    }
+
+    function addLighthouse(x, z) {
+      const g = new THREE.Group();
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.4, 28, 20), materials.stone);
+      tower.position.y = 14;
+      tower.castShadow = settings.shadows;
+      g.add(tower);
+      const light = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 4.8, 3.4, 20), materials.yellow);
+      light.position.y = 29;
+      g.add(light);
+      const lamp = new THREE.PointLight(0xffe08a, 1.8, 80);
+      lamp.position.y = 30;
+      g.add(lamp);
+      placeStructure(g, x, z, 0);
+      addMonument("Lighthouse", x, z, 0, 24, false);
+      addLocalLoot(x, z, 0, 5, -7, "crate");
+    }
+
+    function addBox(group, x, y, z, w, h, d, material) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y + h * 0.5, z);
+      mesh.castShadow = settings.shadows;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+      return mesh;
+    }
+
+    function placeStructure(group, x, z, rot) {
+      const box = new THREE.Box3().setFromObject(group);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const baseY = structureBaseHeight(x, z, rot, Math.max(size.x, 8), Math.max(size.z, 8));
+
+      createStructureSkirt(x, z, rot, Math.max(size.x + 3, 12), Math.max(size.z + 3, 12), baseY);
+      group.position.set(x, baseY + 0.08, z);
+      group.rotation.y = rot;
+      scene.add(group);
+    }
+
+    function structureBaseHeight(x, z, rot, width, depth) {
+      const samples = [];
+      const xs = [-0.5, 0, 0.5];
+      const zs = [-0.5, 0, 0.5];
+
+      xs.forEach(function (sx) {
+        zs.forEach(function (sz) {
+          const p = rotate(sx * width, sz * depth, rot);
+          samples.push(terrainHeight(x + p.x, z + p.z));
+        });
+      });
+
+      samples.sort(function (a, b) { return a - b; });
+      return samples[Math.floor(samples.length * 0.55)];
+    }
+
+    function createStructureSkirt(x, z, rot, width, depth, baseY) {
+      const skirt = new THREE.Group();
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(width, 0.42, depth), materials.stone);
+      slab.position.y = -0.22;
+      slab.receiveShadow = true;
+      slab.castShadow = settings.shadows;
+      skirt.add(slab);
+
+      const lipN = new THREE.Mesh(new THREE.BoxGeometry(width, 0.65, 0.55), materials.dirt);
+      lipN.position.set(0, -0.48, -depth * 0.5);
+      skirt.add(lipN);
+
+      const lipS = lipN.clone();
+      lipS.position.z = depth * 0.5;
+      skirt.add(lipS);
+
+      const lipE = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, depth), materials.dirt);
+      lipE.position.set(width * 0.5, -0.48, 0);
+      skirt.add(lipE);
+
+      const lipW = lipE.clone();
+      lipW.position.x = -width * 0.5;
+      skirt.add(lipW);
+
+      skirt.position.set(x, baseY, z);
+      skirt.rotation.y = rot;
+      scene.add(skirt);
+    }
+
+    function addMonument(label, x, z, rot, radius, radiation) {
+      monuments.push({ label, x, z, rot, radius, radiation });
+      markers.push({ x, z, kind: radiation ? "rad" : "monument", label });
+      collisions.push({ x, z, r: radius * 0.55, type: "monument" });
+      if (radiation) {
+        const zone = new THREE.Mesh(new THREE.CircleGeometry(radius * 1.4, 44), materials.radiation);
+        zone.rotation.x = -Math.PI / 2;
+        zone.position.set(x, terrainHeight(x, z) + 0.35, z);
+        scene.add(zone);
+      }
+    }
+
+    function addLocalLoot(x, z, rot, lx, lz, type) {
+      const p = rotate(lx, lz, rot);
+      createLoot(x + p.x, z + p.z, type);
+    }
+
+    function createResources() {
+      const density = [0.6, 1, 1.35][settings.density] || 1;
+      scatterResource("tree", Math.floor(160 * density));
+      scatterResource("stone", Math.floor(55 * density));
+      scatterResource("metal", Math.floor(30 * density));
+      scatterResource("sulfur", Math.floor(22 * density));
+      scatterResource("hemp", Math.floor(46 * density));
+      scatterResource("mushroom", Math.floor(34 * density));
+      scatterRoadLoot(Math.floor(42 * density));
+    }
+
+    function scatterResource(type, count) {
+      let tries = 0;
+      let placed = 0;
+      while (placed < count && tries < count * 20) {
+        tries++;
+        const angle = rand(0, Math.PI * 2);
+        const radius = Math.sqrt(Math.random()) * (WORLD_RADIUS - 28);
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        if (!safeNaturalSpot(x, z, type)) continue;
+        createResource(x, z, type);
+        placed++;
+      }
+    }
+
+    function safeNaturalSpot(x, z, type) {
+      if (Math.hypot(x, z) > WORLD_RADIUS - 20) return false;
+      if (waterDepthAt(x, z) > 0.05) return false;
+      if (nearestPathDistance(x, z, roads) < (type === "tree" ? 13 : 8)) return false;
+      if (monuments.some(function (m) { return dist2(x, z, m.x, m.z) < m.radius + 16; })) return false;
+      return true;
+    }
+
+    function scatterRoadLoot(count) {
+      for (let i = 0; i < count; i++) {
+        const path = roads[randInt(0, roads.length - 1)];
+        const point = path[randInt(4, path.length - 5)];
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const prev = path[Math.max(0, path.indexOf(point) - 1)] || point;
+        const next = path[Math.min(path.length - 1, path.indexOf(point) + 1)] || point;
+        const dx = next.x - prev.x;
+        const dz = next.z - prev.z;
+        const len = Math.hypot(dx, dz) || 1;
+        const x = point.x + (-dz / len) * side * rand(9, 18);
+        const z = point.z + (dx / len) * side * rand(9, 18);
+        createLoot(x, z, Math.random() < 0.72 ? "barrel" : "crate");
+      }
+    }
+
+    function createResource(x, z, type) {
+      const y = surfaceHeight(x, z);
+      let group = new THREE.Group();
+      let hp = 40;
+      let radius = 1.2;
+      let label = "Resource";
+      let loot = {};
+
+      if (type === "tree") {
+        label = "Tree";
+        hp = 65;
+        radius = 1.45;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.65, rand(5, 8), 8), materials.woodDark);
+        trunk.position.y = 2.7;
+        trunk.castShadow = settings.shadows;
+        group.add(trunk);
+        const crown = new THREE.Mesh(new THREE.ConeGeometry(rand(2.5, 3.7), rand(6, 8), 9), materials.leaves);
+        crown.position.y = 7.2;
+        crown.castShadow = settings.shadows;
+        group.add(crown);
+
+        const crown2 = new THREE.Mesh(new THREE.ConeGeometry(rand(1.8, 2.8), rand(4, 5.5), 9), materials.grassBlade);
+        crown2.position.y = 9.4;
+        crown2.rotation.y = rand(0, Math.PI);
+        crown2.castShadow = settings.shadows;
+        group.add(crown2);
+        loot = { wood: randInt(42, 86) };
+      } else if (type === "stone" || type === "metal" || type === "sulfur") {
+        label = type === "stone" ? "Stone node" : type === "metal" ? "Metal node" : "Sulfur node";
+        hp = type === "stone" ? 58 : 72;
+        radius = 1.65;
+        const material = type === "stone" ? materials.stone : type === "metal" ? materials.metal : materials.sulfur;
+        for (let i = 0; i < 3; i++) {
+          const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rand(0.7, 1.25), 0), material);
+          rock.position.set(rand(-0.8, 0.8), rand(0.45, 0.9), rand(-0.8, 0.8));
+          rock.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
+          rock.castShadow = settings.shadows;
+          group.add(rock);
+        }
+        loot = type === "stone" ? { stone: randInt(45, 85) } : type === "metal" ? { metalOre: randInt(32, 68), stone: randInt(12, 24) } : { sulfurOre: randInt(26, 58), stone: randInt(8, 18) };
+      } else if (type === "hemp") {
+        label = "Hemp";
+        hp = 1;
+        radius = 0.8;
+        for (let i = 0; i < 5; i++) {
+          const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.12, rand(1.0, 1.6), 0.12), materials.hemp);
+          leaf.position.set(rand(-0.35, 0.35), 0.65, rand(-0.35, 0.35));
+          leaf.rotation.z = rand(-0.35, 0.35);
+          group.add(leaf);
+        }
+        loot = { cloth: randInt(5, 12) };
+      } else {
+        label = "Mushroom";
+        hp = 1;
+        radius = 0.6;
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.5, 8), materials.cloth);
+        stem.position.y = 0.25;
+        group.add(stem);
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.36, 12, 8), materials.red);
+        cap.position.y = 0.55;
+        group.add(cap);
+        loot = { mushroom: randInt(1, 2) };
+      }
+
+      group.position.set(x, y, z);
+      group.rotation.y = rand(0, Math.PI * 2);
+      scene.add(group);
+      const entry = { type, label, x, z, y, hp, maxHp: hp, radius, loot, object: group, action: type === "hemp" || type === "mushroom" ? "pickup" : "harvest" };
+      interactables.push(entry);
+      if (type === "tree" || type === "stone" || type === "metal" || type === "sulfur") {
+        collisions.push({ x, z, r: radius, type });
+      }
+      if (type !== "tree") markers.push({ x, z, kind: type === "hemp" || type === "mushroom" ? "food" : "resource", label });
+    }
+
+    function createLoot(x, z, type) {
+      if (waterDepthAt(x, z) > 0.2) return;
+      const group = new THREE.Group();
+      let label = "Loot crate";
+      let loot = {};
+      let radius = 1.2;
+      if (type === "barrel" || type === "fuel") {
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.7, 16), type === "fuel" ? materials.red : materials.yellow);
+        barrel.position.y = 0.85;
+        barrel.castShadow = settings.shadows;
+        group.add(barrel);
+
+        const topRing = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.035, 8, 24), materials.metal);
+        topRing.position.y = 1.68;
+        topRing.rotation.x = Math.PI / 2;
+        group.add(topRing);
+
+        const bottomRing = topRing.clone();
+        bottomRing.position.y = 0.02;
+        group.add(bottomRing);
+        label = type === "fuel" ? "Fuel barrel" : "Road barrel";
+        loot = type === "fuel" ? { lowGradeFuel: randInt(2, 8), crudeOil: randInt(1, 5), scrap: randInt(1, 6) } : { scrap: randInt(2, 8), metalFragments: randInt(4, 14), cloth: randInt(0, 5) };
+      } else {
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.4, 1.8), type === "military" ? materials.green : materials.wood);
+        crate.position.y = 0.7;
+        crate.castShadow = settings.shadows;
+        group.add(crate);
+
+        const bandA = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.12, 0.12), materials.metal);
+        bandA.position.set(0, 1.28, -0.92);
+        group.add(bandA);
+
+        const bandB = bandA.clone();
+        bandB.position.z = 0.92;
+        group.add(bandB);
+
+        const latch = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.08), materials.yellow);
+        latch.position.set(0, 0.82, -0.94);
+        group.add(latch);
+        label = type === "military" ? "Military crate" : "Loot crate";
+        loot = type === "military" ? { scrap: randInt(12, 26), metalFragments: randInt(12, 30), lowGradeFuel: randInt(1, 6), bandage: 1 } : { scrap: randInt(4, 13), cloth: randInt(2, 9), waterBottle: Math.random() < 0.35 ? 1 : 0 };
+      }
+      group.position.set(x, surfaceHeight(x, z) + 0.05, z);
+      group.rotation.y = rand(0, Math.PI * 2);
+      scene.add(group);
+      interactables.push({ type, label, x, z, y: group.position.y, hp: 22, maxHp: 22, radius, loot, object: group, action: "loot" });
+      markers.push({ x, z, kind: type === "military" ? "rad" : "loot", label });
+    }
+
+    function createGroundDetails() {
+      const density = [0.55, 1, 1.3][settings.density] || 1;
+      createGrassBlades(Math.floor(850 * density));
+      createPebbleField(Math.floor(150 * density));
+      createWildFlowers(Math.floor(110 * density));
+    }
+
+    function createGrassBlades(count) {
+      const geometry = new THREE.PlaneGeometry(0.22, 1.25, 1, 1);
+      geometry.translate(0, 0.62, 0);
+      const mesh = new THREE.InstancedMesh(geometry, materials.grassBlade, count);
+      const dummy = new THREE.Object3D();
+      let placed = 0;
+      let tries = 0;
+
+      while (placed < count && tries < count * 8) {
+        tries++;
+        const p = randomLandPoint(35, WORLD_RADIUS - 30);
+
+        if (!p) continue;
+        if (waterDepthAt(p.x, p.z) > 0.05) continue;
+        if (nearestPathDistance(p.x, p.z, roads) < 7) continue;
+        if (mountainInfluenceAt(p.x, p.z) > 0.72) continue;
+
+        dummy.position.set(p.x, terrainHeight(p.x, p.z) + 0.05, p.z);
+        dummy.rotation.set(rand(-0.12, 0.12), rand(0, Math.PI * 2), rand(-0.18, 0.18));
+        const scale = rand(0.55, 1.45);
+        dummy.scale.set(scale, scale * rand(0.8, 1.4), scale);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(placed, dummy.matrix);
+        placed++;
+      }
+
+      mesh.count = placed;
+      mesh.frustumCulled = true;
+      scene.add(mesh);
+    }
+
+    function createPebbleField(count) {
+      const geometry = new THREE.DodecahedronGeometry(0.35, 0);
+      const mesh = new THREE.InstancedMesh(geometry, materials.stone, count);
+      const dummy = new THREE.Object3D();
+      let placed = 0;
+      let tries = 0;
+
+      while (placed < count && tries < count * 10) {
+        tries++;
+        const p = randomLandPoint(45, WORLD_RADIUS - 26);
+
+        if (!p) continue;
+        if (waterDepthAt(p.x, p.z) > 0.05) continue;
+        if (nearestPathDistance(p.x, p.z, roads) < 4) continue;
+
+        dummy.position.set(p.x, terrainHeight(p.x, p.z) + 0.16, p.z);
+        dummy.rotation.set(rand(0, Math.PI), rand(0, Math.PI), rand(0, Math.PI));
+        const scale = rand(0.45, 1.4) * (mountainInfluenceAt(p.x, p.z) > 0.45 ? 1.45 : 1);
+        dummy.scale.set(scale, scale * rand(0.45, 0.9), scale);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(placed, dummy.matrix);
+        placed++;
+      }
+
+      mesh.count = placed;
+      scene.add(mesh);
+    }
+
+    function createWildFlowers(count) {
+      const geometry = new THREE.CircleGeometry(0.18, 8);
+      const flowerMaterial = new THREE.MeshBasicMaterial({ color: 0xd7c35e, side: THREE.DoubleSide });
+      const mesh = new THREE.InstancedMesh(geometry, flowerMaterial, count);
+      const dummy = new THREE.Object3D();
+      let placed = 0;
+      let tries = 0;
+
+      while (placed < count && tries < count * 10) {
+        tries++;
+        const p = randomLandPoint(40, WORLD_RADIUS - 42);
+
+        if (!p) continue;
+        if (waterDepthAt(p.x, p.z) > 0.05) continue;
+        if (nearestPathDistance(p.x, p.z, roads) < 11) continue;
+        if (mountainInfluenceAt(p.x, p.z) > 0.45) continue;
+
+        dummy.position.set(p.x, terrainHeight(p.x, p.z) + 0.08, p.z);
+        dummy.rotation.set(-Math.PI / 2, 0, rand(0, Math.PI * 2));
+        const scale = rand(0.55, 1.2);
+        dummy.scale.set(scale, scale, scale);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(placed, dummy.matrix);
+        placed++;
+      }
+
+      mesh.count = placed;
+      scene.add(mesh);
+    }
+
+    function randomLandPoint(minRadius, maxRadius) {
+      const angle = rand(0, Math.PI * 2);
+      const radius = Math.sqrt(Math.random()) * (maxRadius - minRadius) + minRadius;
+      return {
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius
+      };
+    }
+
+    function createAnimals() {
+      const count = [8, 12, 16][settings.density] || 12;
+      for (let i = 0; i < count; i++) {
+        const kind = Math.random() < 0.22 ? "wolf" : Math.random() < 0.52 ? "boar" : "deer";
+        let x = 0;
+        let z = 0;
+        for (let t = 0; t < 60; t++) {
+          const a = rand(0, Math.PI * 2);
+          const r = rand(60, WORLD_RADIUS - 45);
+          x = Math.cos(a) * r;
+          z = Math.sin(a) * r;
+          if (safeNaturalSpot(x, z, kind)) break;
+        }
+        createAnimal(x, z, kind);
+      }
+    }
+
+    function createAnimal(x, z, kind) {
+      const group = new THREE.Group();
+      const bodyMat =
+        kind === "wolf" ? materials.wolfFur :
+        kind === "boar" ? materials.boarFur :
+        materials.deerFur;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(kind === "deer" ? 2.2 : 2.5, 1.15, kind === "deer" ? 1 : 1.35), bodyMat);
+      body.position.y = 1.1;
+      body.castShadow = settings.shadows;
+      group.add(body);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.75, 0.8), bodyMat);
+      head.position.set(1.55, 1.35, 0);
+      group.add(head);
+
+      if (kind === "deer") {
+        const antlerL = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.9, 6), materials.woodDark);
+        antlerL.position.set(1.95, 1.95, -0.24);
+        antlerL.rotation.z = -0.55;
+        group.add(antlerL);
+
+        const antlerR = antlerL.clone();
+        antlerR.position.z = 0.24;
+        antlerR.rotation.z = -0.55;
+        group.add(antlerR);
+      }
+
+      if (kind === "boar") {
+        const tuskL = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.45, 8), materials.sand);
+        tuskL.position.set(2.04, 1.18, -0.24);
+        tuskL.rotation.z = -Math.PI / 2;
+        group.add(tuskL);
+
+        const tuskR = tuskL.clone();
+        tuskR.position.z = 0.24;
+        group.add(tuskR);
+      }
+      for (let i = 0; i < 4; i++) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.9, 0.22), bodyMat);
+        leg.position.set(i < 2 ? -0.7 : 0.75, 0.45, i % 2 ? -0.45 : 0.45);
+        group.add(leg);
+      }
+      group.position.set(x, surfaceHeight(x, z), z);
+      group.rotation.y = rand(0, Math.PI * 2);
+      scene.add(group);
+      const data = {
+        kind,
+        label: kind === "wolf" ? "Wolf" : kind === "boar" ? "Boar" : "Deer",
+        x, z,
+        hp: kind === "wolf" ? 70 : kind === "boar" ? 55 : 42,
+        maxHp: kind === "wolf" ? 70 : kind === "boar" ? 55 : 42,
+        radius: 1.4,
+        object: group,
+        action: "animal",
+        loot: { animalFat: kind === "deer" ? 6 : 10, cloth: kind === "wolf" ? 12 : 6 },
+        dir: rand(0, Math.PI * 2),
+        timer: rand(1, 4),
+        attackCooldown: 0
+      };
+      animals.push(data);
+      interactables.push(data);
+      markers.push({ x, z, kind: "animal", label: data.label });
+    }
+
+    function createClouds() {
+      for (let i = 0; i < 18; i++) {
+        const group = new THREE.Group();
+        for (let j = 0; j < 4; j++) {
+          const puff = new THREE.Mesh(new THREE.SphereGeometry(rand(7, 14), 12, 8), materials.cloud);
+          puff.position.set(j * rand(8, 13), rand(-2, 2), rand(-3, 3));
+          puff.scale.y = rand(0.38, 0.72);
+          group.add(puff);
+        }
+        group.position.set(rand(-460, 460), rand(92, 128), rand(-430, 430));
+        scene.add(group);
+        animated.push({ type: "cloud", object: group, speed: rand(1.8, 4.2) });
+      }
+    }
+
+    function createHeldTool() {
+      heldGroup = new THREE.Group();
+      camera.add(heldGroup);
+      scene.add(camera);
+      refreshHeldTool();
+    }
+
+    function refreshHeldTool() {
+      if (!heldGroup) return;
+      while (heldGroup.children.length) heldGroup.remove(heldGroup.children[0]);
+      const tool = hotbar[player.selectedSlot];
+      if (!hasItem(tool.id)) return;
+      const matTool = tool.id === "torch" ? materials.wood : tool.id === "pickaxe" ? materials.metal : materials.stone;
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 1.45), materials.wood);
+      handle.position.set(0.48, -0.42, -0.85);
+      handle.rotation.set(0.45, 0.15, -0.35);
+      heldGroup.add(handle);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.25), matTool);
+      head.position.set(0.42, -0.22, -1.38);
+      head.rotation.set(0.25, 0.2, -0.25);
+      heldGroup.add(head);
+      if (tool.id === "torch") {
+        const light = new THREE.PointLight(0xff9b35, 1.8, 18);
+        light.position.set(0.42, -0.18, -1.42);
+        heldGroup.add(light);
+      }
+    }
+
+    function createBuildGhost() {
+      buildGhost = new THREE.Group();
+      buildGhost.visible = false;
+      scene.add(buildGhost);
+      updateBuildGhostShape(true);
+    }
+
+    function updateBuildGhostShape(force) {
+      if (!buildGhost || (!force && buildGhost.userData.piece === state.selectedBuild)) return;
+      while (buildGhost.children.length) buildGhost.remove(buildGhost.children[0]);
+      const piece = getBuildPiece(state.selectedBuild);
+      if (!piece) return;
+      buildGhost.userData.piece = state.selectedBuild;
+      const ghostMat = materials.ghostOk;
+      if (piece.id === "foundation") {
+        addBox(buildGhost, 0, 0, 0, 6, 0.4, 6, ghostMat);
+      } else if (piece.id === "wall") {
+        addBox(buildGhost, 0, 0, 0, 6, 3.3, 0.35, ghostMat);
+      } else if (piece.id === "doorframe") {
+        addBox(buildGhost, -2.05, 0, 0, 1.9, 3.3, 0.35, ghostMat);
+        addBox(buildGhost, 2.05, 0, 0, 1.9, 3.3, 0.35, ghostMat);
+        addBox(buildGhost, 0, 2.55, 0, 6, 0.75, 0.35, ghostMat);
+      } else if (piece.id === "roof") {
+        addBox(buildGhost, 0, 3.1, 0, 6, 0.35, 6, ghostMat);
+      } else if (piece.id === "campfire") {
+        const fire = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.25, 16), ghostMat);
+        fire.position.y = 0.18;
+        buildGhost.add(fire);
+      } else if (piece.id === "sleepingBag") {
+        addBox(buildGhost, 0, 0, 0, 4.2, 0.22, 2, ghostMat);
+      } else {
+        addBox(buildGhost, 0, 0, 0, 2.2, 1.5, 1.6, ghostMat);
+      }
+    }
+
+    function nearestPathDistance(x, z, paths) {
+      let best = Infinity;
+      paths.forEach(function (path) {
+        for (let i = 0; i < path.length - 1; i++) {
+          best = Math.min(best, pointSegmentDistance(x, z, path[i].x, path[i].z, path[i + 1].x, path[i + 1].z));
+        }
+      });
+      return best;
+    }
+
+    function pointSegmentDistance(px, pz, ax, az, bx, bz) {
+      const dx = bx - ax;
+      const dz = bz - az;
+      const len = dx * dx + dz * dz || 1;
+      const t = clamp(((px - ax) * dx + (pz - az) * dz) / len, 0, 1);
+      return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
+    }
+
+    function getBridgeAt(x, z, margin) {
+      for (const bridge of bridges) {
+        const local = worldToBridge(x, z, bridge);
+        if (Math.abs(local.x) <= bridge.width * 0.5 + margin && Math.abs(local.z) <= bridge.length * 0.5 + margin) return bridge;
+      }
+      return null;
+    }
+
+    function worldToBridge(x, z, bridge) {
+      const dx = x - bridge.x;
+      const dz = z - bridge.z;
+      const c = Math.cos(-bridge.angle);
+      const s = Math.sin(-bridge.angle);
+      return { x: dx * c - dz * s, z: dx * s + dz * c };
+    }
+
+    function waterDepthAt(x, z) {
+      if (getBridgeAt(x, z, 0.3)) return 0;
+      if (nearestPathDistance(x, z, roads) < 7.8) return 0;
+      let depth = 0;
+      const river = nearestPathDistance(x, z, riverPaths);
+      if (river < 5.8) depth = Math.max(depth, 1);
+      else if (river < 10.8) depth = Math.max(depth, 0.55);
+      else if (river < 12.6) depth = Math.max(depth, 0.24);
+      ponds.forEach(function (pond) {
+        const d = dist2(x, z, pond.x, pond.z);
+        if (d < pond.r * 0.45) depth = Math.max(depth, 1);
+        else if (d < pond.r * 0.78) depth = Math.max(depth, 0.65);
+        else if (d < pond.r) depth = Math.max(depth, 0.28);
+      });
+      if (Math.hypot(x, z) > WORLD_RADIUS - 8) depth = Math.max(depth, 1);
+      return depth;
+    }
+
+    function surfaceLabelAt(x, z) {
+      const depth = waterDepthAt(x, z);
+      if (getBridgeAt(x, z, 0.3)) return "Most";
+      if (nearestPathDistance(x, z, roads) < 7.8) return "Silnice";
+      if (depth > 0.85) return "Hluboká voda";
+      if (depth > 0.2) return "Mělká voda";
+      if (nearestPathDistance(x, z, riverPaths) < 16 || ponds.some(function (p) { return dist2(x, z, p.x, p.z) < p.r + 7; })) return "Břeh";
+      return "Terén";
+    }
+
+    function placePlayer(x, z) {
+      player.x = x;
+      player.z = z;
+      player.vx = 0;
+      player.vz = 0;
+      player.y = surfaceHeight(x, z) + EYE_HEIGHT;
+      camera.position.set(player.x, player.y, player.z);
+      camera.rotation.order = "YXZ";
+    }
+
+    function onKeyDown(event) {
+      keys[event.code] = true;
+      if (!state.started) return;
+
+      if (event.code === "Escape") {
+        if (state.paused) resumeGame();
+        else openPause();
+      }
+
+      if (state.paused || state.inMenu) return;
+
+      if (event.code.startsWith("Digit")) {
+        const index = Number(event.code.slice(5)) - 1;
+        if (index >= 0 && index < hotbar.length) {
+          player.selectedSlot = index;
+          refreshHeldTool();
+          renderHotbar();
+        }
+      }
+
+      if (event.code === "Tab") {
+        event.preventDefault();
+        openPanel("inventoryOverlay");
+      }
+      if (event.code === "KeyB") {
+        state.buildMode = true;
+        openPanel("buildOverlay");
+      }
+      if (event.code === "KeyM") openPanel("mapOverlay");
+      if (event.code === "KeyO") openPanel("settingsOverlay");
+      if (event.code === "KeyE") interactAction();
+      if (event.code === "KeyF") placeBuildPiece();
+      if (event.code === "KeyR") {
+        state.buildRotation += Math.PI / 2;
+        showMessage("Build rotace: " + Math.round((state.buildRotation / Math.PI * 180) % 360) + "°");
+      }
+      if (event.code === "KeyG") eatMushroom();
+      if (event.code === "KeyH") useBandage();
+    }
+
+    function onMouseMove(event) {
+      if (!state.started || state.paused || document.pointerLockElement !== document.body) return;
+      player.yaw -= event.movementX * 0.0022;
+      player.pitch -= event.movementY * 0.002;
+      player.pitch = clamp(player.pitch, -1.35, 1.28);
+    }
+
+    function requestPointerLockSoon() {
+      setTimeout(function () {
+        if (!state.started || state.paused || state.inMenu) return;
+        try { document.body.requestPointerLock(); } catch (error) {}
+      }, 100);
+    }
+
+    function openPanel(id) {
+      state.paused = true;
+      document.exitPointerLock?.();
+      ui[id].classList.remove("hidden");
+      if (id === "inventoryOverlay") {
+        renderInventory();
+        renderCrafting();
+      }
+      if (id === "buildOverlay") renderBuildMenu();
+      if (id === "mapOverlay") drawBigMap();
+      if (id === "settingsOverlay") syncSettingsUi();
+    }
+
+    function closePanel(id) {
+      ui[id].classList.add("hidden");
+      const anyOpen = ["inventoryOverlay", "buildOverlay", "mapOverlay", "settingsOverlay", "pauseOverlay"].some(function (key) {
+        return !ui[key].classList.contains("hidden");
+      });
+      state.paused = anyOpen;
+      if (!anyOpen) requestPointerLockSoon();
+    }
+
+    function openPause() {
+      state.paused = true;
+      document.exitPointerLock?.();
+      ui.pauseOverlay.classList.remove("hidden");
+    }
+
+    function resumeGame() {
+      ["inventoryOverlay", "buildOverlay", "mapOverlay", "settingsOverlay", "pauseOverlay"].forEach(function (id) {
+        ui[id].classList.add("hidden");
+      });
+      state.paused = false;
+      requestPointerLockSoon();
+    }
+
+    function returnToMenu() {
+      state.inMenu = true;
+      state.paused = true;
+      ui.menuOverlay.classList.remove("hidden");
+      ui.gameHud.classList.add("hidden");
+      ["inventoryOverlay", "buildOverlay", "mapOverlay", "settingsOverlay", "pauseOverlay"].forEach(function (id) {
+        ui[id].classList.add("hidden");
+      });
+      document.exitPointerLock?.();
+      renderMenuSaveState();
+    }
+
+    function update(dt) {
+      if (state.paused || state.inMenu) return;
+      state.time += dt;
+      state.day = (state.day + dt * 0.006) % 1;
+      updateMovement(dt);
+      updateWeather(dt);
+      updateSurvival(dt);
+      updateAnimals(dt);
+      updateAnimations(dt);
+      updateBuildGhost(dt);
+      updateCamera(dt);
+      updateTarget();
+      updateUi();
+      maybeAutoSave();
+    }
+
+    function updateMovement(dt) {
+      const forward = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+      const strafe = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+      let length = Math.hypot(forward, strafe);
+      let mx = 0;
+      let mz = 0;
+      if (length > 0) {
+        length = 1 / length;
+        const f = forward * length;
+        const s = strafe * length;
+        mx = -Math.sin(player.yaw) * f + Math.cos(player.yaw) * s;
+        mz = -Math.cos(player.yaw) * f - Math.sin(player.yaw) * s;
+      }
+
+      const depth = waterDepthAt(player.x, player.z);
+      const sprinting = keys.ShiftLeft && player.stamina > 2 && length !== 0 && depth < 0.85;
+      let speed = sprinting ? 19 : 12.5;
+      if (depth > 0.85) speed = 6.2;
+      else if (depth > 0.2) speed = 8.8;
+      if (sprinting) player.stamina = clamp(player.stamina - dt * 18, 0, 100);
+      else player.stamina = clamp(player.stamina + dt * 10.5, 0, 100);
+
+      const nx = player.x + mx * speed * dt;
+      const nz = player.z + mz * speed * dt;
+      moveWithCollision(nx, nz);
+      player.y = surfaceHeight(player.x, player.z) + EYE_HEIGHT;
+      state.surface = surfaceLabelAt(player.x, player.z);
+    }
+
+    function moveWithCollision(nx, nz) {
+      if (Math.hypot(nx, nz) > WORLD_RADIUS + 6) return;
+      let x = nx;
+      let z = nz;
+      collisions.forEach(function (c) {
+        const d = dist2(x, z, c.x, c.z);
+        const min = c.r + 1.05;
+        if (d < min && d > 0.001) {
+          const push = (min - d) / d;
+          x += (x - c.x) * push;
+          z += (z - c.z) * push;
+        }
+      });
+      player.x = x;
+      player.z = z;
+    }
+
+    function updateCamera(dt) {
+      const bob = settings.bob && !state.paused ? Math.sin(state.time * 10) * 0.035 * (keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD ? 1 : 0) : 0;
+      camera.position.set(player.x, player.y + bob, player.z);
+      camera.rotation.y = player.yaw;
+      camera.rotation.x = player.pitch;
+    }
+
+    function updateWeather(dt) {
+      state.weatherTimer -= dt;
+      if (state.weatherTimer <= 0) {
+        if (state.weather === "clear") {
+          state.weather = Math.random() < 0.65 ? "rain" : "fog";
+          state.weatherTimer = rand(70, 120);
+          showMessage(state.weather === "rain" ? "Začalo pršet." : "Padá hustší mlha.");
+        } else {
+          state.weather = "clear";
+          state.weatherTimer = rand(90, 160);
+          showMessage("Počasí se zlepšilo.");
+        }
+      }
+      const targetRain = state.weather === "rain" ? 1 : 0;
+      state.rain += (targetRain - state.rain) * dt * 0.6;
+      const sun = Math.sin(state.day * Math.PI);
+      ambientLight.intensity = 0.32 + sun * 0.62 - state.rain * 0.14;
+      sunLight.intensity = 0.45 + sun * 2.1 - state.rain * 0.5;
+      scene.background.setHex(state.weather === "fog" ? 0xa1adad : state.rain > 0.2 ? 0x718ca3 : 0x88b5dc);
+      if (scene.fog) {
+        scene.fog.color.copy(scene.background);
+        scene.fog.near = state.weather === "fog" ? 65 : 145;
+        scene.fog.far = state.weather === "fog" ? 420 : 760;
+      }
+    }
+
+    function updateSurvival(dt) {
+      const depth = waterDepthAt(player.x, player.z);
+      const nearFire = buildObjects.some(function (o) { return o.type === "campfire" && dist2(player.x, player.z, o.x, o.z) < 12; });
+      player.hunger = clamp(player.hunger - dt * 0.42, 0, 100);
+      player.thirst = clamp(player.thirst - dt * 0.62, 0, 100);
+
+      if (depth > 0.2 || state.rain > 0.35) player.wetness = clamp(player.wetness + dt * (depth > 0.2 ? 22 : 9), 0, 100);
+      else player.wetness = clamp(player.wetness - dt * (nearFire ? 12 : 2.2), 0, 100);
+
+      let rad = 0;
+      monuments.forEach(function (m) {
+        if (!m.radiation) return;
+        const d = dist2(player.x, player.z, m.x, m.z);
+        if (d < m.radius * 1.45) rad = Math.max(rad, (1 - d / (m.radius * 1.45)) * 42);
+      });
+      player.radiation += (rad - player.radiation) * dt * 0.75;
+
+      const dayWarmth = Math.sin(state.day * Math.PI) * 15;
+      state.temperature = 4 + dayWarmth - state.rain * 5 - player.wetness * 0.07 + (nearFire ? 16 : 0);
+
+      if (player.hunger <= 0 || player.thirst <= 0) player.health = clamp(player.health - dt * 1.3, 0, 100);
+      if (player.radiation > 18) player.health = clamp(player.health - dt * (player.radiation - 18) * 0.08, 0, 100);
+      if (state.temperature < 1) player.health = clamp(player.health - dt * 0.65, 0, 100);
+      if (player.health <= 0) respawnPlayer();
+    }
+
+    function updateAnimals(dt) {
+      animals.forEach(function (animal) {
+        if (animal.hp <= 0) return;
+        animal.timer -= dt;
+        if (animal.timer <= 0) {
+          animal.dir += rand(-1.4, 1.4);
+          animal.timer = rand(1.2, 4.5);
+        }
+        const dPlayer = dist2(animal.x, animal.z, player.x, player.z);
+        let speed = animal.kind === "wolf" ? 7.8 : 4.4;
+        if (animal.kind !== "wolf" && dPlayer < 20) {
+          animal.dir = Math.atan2(animal.x - player.x, animal.z - player.z);
+          speed = animal.kind === "deer" ? 10 : 7;
+        }
+        if (animal.kind === "wolf" && dPlayer < 42) {
+          animal.dir = Math.atan2(player.x - animal.x, player.z - animal.z);
+          speed = 9.2;
+          animal.attackCooldown -= dt;
+          if (dPlayer < 2.5 && animal.attackCooldown <= 0) {
+            player.health = clamp(player.health - 9, 0, 100);
+            animal.attackCooldown = 1.25;
+            showMessage("Wolf tě kousnul.");
+          }
+        }
+        const nx = animal.x + Math.sin(animal.dir) * speed * dt;
+        const nz = animal.z + Math.cos(animal.dir) * speed * dt;
+        if (Math.hypot(nx, nz) < WORLD_RADIUS - 20 && waterDepthAt(nx, nz) < 0.45) {
+          animal.x = nx;
+          animal.z = nz;
+          animal.object.position.set(nx, surfaceHeight(nx, nz), nz);
+          animal.object.rotation.y = animal.dir + Math.PI / 2;
+        } else {
+          animal.dir += Math.PI * 0.55;
+        }
+      });
+    }
+
+    function updateAnimations(dt) {
+      animated.forEach(function (entry) {
+        if (entry.type === "water") {
+          entry.object.material.opacity = 0.72 + Math.sin(state.time * 1.8) * 0.05;
+        } else if (entry.type === "foam") {
+          entry.object.material.opacity = 0.24 + Math.sin(state.time * 2.3) * 0.06;
+        } else if (entry.type === "cloud") {
+          entry.object.position.x += entry.speed * dt;
+          if (entry.object.position.x > 520) entry.object.position.x = -520;
+        } else if (entry.type === "fire") {
+          entry.object.scale.y = 1 + Math.sin(state.time * 12) * 0.16;
+          entry.object.rotation.y += dt * 2.4;
+        }
+      });
+    }
+
+    function updateTarget() {
+      currentTarget = getLookTarget();
+      if (!currentTarget) {
+        ui.targetPanel.classList.add("hidden");
+        return;
+      }
+      ui.targetPanel.classList.remove("hidden");
+      ui.targetName.textContent = currentTarget.label + (currentTarget.hp > 1 ? "  " + Math.ceil(currentTarget.hp) + "/" + currentTarget.maxHp : "");
+      ui.targetHint.textContent = currentTarget.action === "loot" ? "E loot | LPM rozbít" :
+        currentTarget.action === "pickup" ? "E sebrat" :
+        currentTarget.action === "animal" ? "LPM útok" :
+        "LPM těžit";
+    }
+
+    function getLookTarget() {
+      const forward = { x: -Math.sin(player.yaw) * Math.cos(player.pitch), z: -Math.cos(player.yaw) * Math.cos(player.pitch) };
+      let best = null;
+      let bestScore = Infinity;
+      interactables.forEach(function (item) {
+        if (item.hp <= 0) return;
+        const dx = item.x - player.x;
+        const dz = item.z - player.z;
+        const d = Math.hypot(dx, dz);
+        if (d > 10.5) return;
+        const dot = (dx / d) * forward.x + (dz / d) * forward.z;
+        if (dot < 0.86) return;
+        const score = d - dot * 4;
+        if (score < bestScore) {
+          bestScore = score;
+          best = item;
+        }
+      });
+      return best;
+    }
+
+    function primaryAction() {
+      if (!currentTarget) {
+        swingHeldTool();
+        return;
+      }
+      if (currentTarget.action === "loot" && dist2(player.x, player.z, currentTarget.x, currentTarget.z) < 4) {
+        damageTarget(currentTarget, 18);
+        return;
+      }
+      if (currentTarget.action === "pickup") {
+        lootTarget(currentTarget);
+        return;
+      }
+      const tool = hotbar[player.selectedSlot];
+      if (!hasItem(tool.id)) {
+        showMessage("Nemáš vybraný tool.");
+        return;
+      }
+      const bonus =
+        (currentTarget.type === "tree" && tool.woodBonus ? tool.woodBonus : 1) *
+        ((currentTarget.type === "stone" || currentTarget.type === "metal" || currentTarget.type === "sulfur") && tool.oreBonus ? tool.oreBonus : 1);
+      damageTarget(currentTarget, tool.damage * (tool.harvest || 1) * bonus);
+      swingHeldTool();
+    }
+
+    function damageTarget(target, amount) {
+      target.hp -= amount;
+      if (target.object) {
+        target.object.scale.setScalar(0.96 + Math.random() * 0.04);
+        setTimeout(function () {
+          if (target.object) target.object.scale.setScalar(1);
+        }, 80);
+      }
+      if (target.hp <= 0) lootTarget(target);
+    }
+
+    function lootTarget(target) {
+      Object.keys(target.loot || {}).forEach(function (key) {
+        const amount = target.loot[key];
+        if (amount > 0) addItem(key, amount);
+      });
+      removeInteractable(target);
+      showMessage("Získáno: " + lootText(target.loot));
+      renderAllUi();
+    }
+
+    function removeInteractable(target) {
+      target.hp = 0;
+      if (target.object) scene.remove(target.object);
+      const ci = collisions.findIndex(function (c) { return c.x === target.x && c.z === target.z; });
+      if (ci >= 0) collisions.splice(ci, 1);
+      const ai = animals.indexOf(target);
+      if (ai >= 0) animals.splice(ai, 1);
+    }
+
+    function interactAction() {
+      if (currentTarget) {
+        if (currentTarget.action === "loot" || currentTarget.action === "pickup") {
+          lootTarget(currentTarget);
+          return;
+        }
+      }
+      if (waterDepthAt(player.x, player.z) > 0.2 || nearestPathDistance(player.x, player.z, riverPaths) < 14 || ponds.some(function (p) { return dist2(player.x, player.z, p.x, p.z) < p.r + 8; })) {
+        player.thirst = clamp(player.thirst + 25, 0, 100);
+        player.wetness = clamp(player.wetness + 8, 0, 100);
+        showMessage("Napil ses vody.");
+        return;
+      }
+      showMessage("Tady není co otevřít.");
+    }
+
+    function swingHeldTool() {
+      if (!heldGroup) return;
+      heldGroup.rotation.x = -0.35;
+      setTimeout(function () { if (heldGroup) heldGroup.rotation.x = 0; }, 90);
+    }
+
+    function eatMushroom() {
+      if (!consumeItem("mushroom", 1)) {
+        showMessage("Nemáš houbu.");
+        return;
+      }
+      player.hunger = clamp(player.hunger + 13, 0, 100);
+      player.thirst = clamp(player.thirst + 3, 0, 100);
+      showMessage("Snědl jsi houbu.");
+      renderAllUi();
+    }
+
+    function useBandage() {
+      if (!consumeItem("bandage", 1)) {
+        showMessage("Nemáš bandage.");
+        return;
+      }
+      player.health = clamp(player.health + 18, 0, 100);
+      showMessage("Použil jsi bandage.");
+      renderAllUi();
+    }
+
+    function placeBuildPiece() {
+      const piece = getBuildPiece(state.selectedBuild);
+      if (!piece) return;
+      if (!state.buildMode) {
+        showMessage("Otevři Build menu přes B a vyber díl.");
+        return;
+      }
+      const pos = buildPosition();
+      if (!canAfford(piece.cost)) {
+        showMessage("Chybí suroviny: " + costText(piece.cost));
+        return;
+      }
+      const check = canBuildAt(pos.x, pos.z, piece);
+      if (!check.ok) {
+        showMessage(check.reason);
+        return;
+      }
+      spend(piece.cost);
+      if (piece.id === "campfire") createPlacedCampfire(pos.x, pos.z);
+      else if (piece.id === "sleepingBag") createSleepingBag(pos.x, pos.z);
+      else if (piece.id === "storageBox") createStorageBox(pos.x, pos.z);
+      else createBuildingPiece(piece, pos.x, pos.z);
+      renderAllUi();
+      drawBigMap();
+    }
+
+    function buildPosition() {
+      const distance = 8.2;
+      const x = player.x - Math.sin(player.yaw) * distance;
+      const z = player.z - Math.cos(player.yaw) * distance;
+      return { x: Math.round(x / 3) * 3, z: Math.round(z / 3) * 3 };
+    }
+
+    function canBuildAt(x, z, piece) {
+      if (Math.hypot(x, z) > WORLD_RADIUS - 16) return { ok: false, reason: "Mimo build zónu." };
+      if (waterDepthAt(x, z) > 0.1) return { ok: false, reason: "Nelze stavět ve vodě." };
+      if (nearestPathDistance(x, z, roads) < 10) return { ok: false, reason: "Nelze stavět na silnici." };
+      if (monuments.some(function (m) { return dist2(x, z, m.x, m.z) < m.radius + 20; })) return { ok: false, reason: "Moc blízko monumentu." };
+      for (const c of collisions) {
+        if (dist2(x, z, c.x, c.z) < piece.radius + c.r) return { ok: false, reason: "Kolize s objektem." };
+      }
+      return { ok: true };
+    }
+
+    function updateBuildGhost() {
+      if (!buildGhost) return;
+      updateBuildGhostShape(false);
+      const piece = getBuildPiece(state.selectedBuild);
+      if (!piece || !state.buildMode || state.paused || state.inMenu) {
+        buildGhost.visible = false;
+        return;
+      }
+      const pos = buildPosition();
+      const check = canBuildAt(pos.x, pos.z, piece);
+      buildGhost.visible = true;
+      buildGhost.position.set(pos.x, surfaceHeight(pos.x, pos.z) + 0.05, pos.z);
+      buildGhost.rotation.y = state.buildRotation;
+      buildGhost.traverse(function (child) {
+        if (child.isMesh) child.material = check.ok ? materials.ghostOk : materials.ghostBad;
+      });
+    }
+
+    function createBuildingPiece(piece, x, z) {
+      const group = new THREE.Group();
+      const material = materials.wood;
+      if (piece.id === "foundation") addBox(group, 0, 0, 0, 6, 0.4, 6, material);
+      if (piece.id === "wall") addBox(group, 0, 0, 0, 6, 3.3, 0.35, material);
+      if (piece.id === "doorframe") {
+        addBox(group, -2.05, 0, 0, 1.9, 3.3, 0.35, material);
+        addBox(group, 2.05, 0, 0, 1.9, 3.3, 0.35, material);
+        addBox(group, 0, 2.55, 0, 6, 0.75, 0.35, material);
+      }
+      if (piece.id === "roof") addBox(group, 0, 3.1, 0, 6, 0.35, 6, material);
+      group.position.set(x, surfaceHeight(x, z) + 0.05, z);
+      group.rotation.y = state.buildRotation;
+      scene.add(group);
+      buildObjects.push({ type: piece.id, x, z, object: group });
+      collisions.push({ x, z, r: piece.id === "foundation" || piece.id === "roof" ? 3 : 2.3, type: "build" });
+      markers.push({ x, z, kind: "build", label: piece.name });
+      showMessage("Postaveno: " + piece.name);
+    }
+
+    function createPlacedCampfire(x, z) {
+      const group = new THREE.Group();
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22, 0), materials.stone);
+        rock.position.set(Math.cos(a) * 0.9, 0.25, Math.sin(a) * 0.9);
+        group.add(rock);
+      }
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.3, 12), new THREE.MeshStandardMaterial({ color: 0xff7a18, emissive: 0xff5b00, emissiveIntensity: 1.8, transparent: true, opacity: 0.88 }));
+      flame.position.y = 0.9;
+      group.add(flame);
+      const light = new THREE.PointLight(0xff8c2d, 2, 24);
+      light.position.y = 2.1;
+      group.add(light);
+      group.position.set(x, surfaceHeight(x, z), z);
+      scene.add(group);
+      buildObjects.push({ type: "campfire", x, z, object: group });
+      animated.push({ type: "fire", object: flame });
+      markers.push({ x, z, kind: "build", label: "Campfire" });
+      showMessage("Campfire položený.");
+    }
+
+    function createSleepingBag(x, z) {
+      const group = new THREE.Group();
+      addBox(group, 0, 0, 0, 4.2, 0.22, 2, materials.cloth);
+      addBox(group, -1.35, 0.18, 0, 1.1, 0.18, 1.7, materials.sand);
+      group.position.set(x, surfaceHeight(x, z) + 0.04, z);
+      group.rotation.y = state.buildRotation;
+      scene.add(group);
+      player.respawn = { x, z };
+      buildObjects.push({ type: "sleepingBag", x, z, object: group });
+      markers.push({ x, z, kind: "respawn", label: "Sleeping bag" });
+      showMessage("Respawn point nastavený.");
+    }
+
+    function createStorageBox(x, z) {
+      const group = new THREE.Group();
+      addBox(group, 0, 0, 0, 2.2, 1.5, 1.6, materials.wood);
+      group.position.set(x, surfaceHeight(x, z) + 0.04, z);
+      group.rotation.y = state.buildRotation;
+      scene.add(group);
+      buildObjects.push({ type: "storageBox", x, z, object: group });
+      collisions.push({ x, z, r: 1.3, type: "storage" });
+      markers.push({ x, z, kind: "build", label: "Storage box" });
+      showMessage("Storage box položený.");
+    }
+
+    function renderAllUi() {
+      renderHotbar();
+      renderInventory();
+      renderCrafting();
+      renderBuildMenu();
+      updateUi();
+      drawBigMap();
+      drawMiniMap(true);
+    }
+
+    function updateUi() {
+      setBar(ui.hpBar, ui.hpText, player.health);
+      setBar(ui.foodBar, ui.foodText, player.hunger);
+      setBar(ui.waterBar, ui.waterText, player.thirst);
+      setBar(ui.staminaBar, ui.staminaText, player.stamina);
+      setBar(ui.radBar, ui.radText, player.radiation, 50);
+      ui.surfaceReadout.textContent = "Povrch: " + state.surface + " | Teplota: " + Math.round(state.temperature) + "°C";
+      const status = [];
+      if (player.hunger < 20) status.push("hlad");
+      if (player.thirst < 20) status.push("žízeň");
+      if (player.wetness > 20) status.push("mokrý " + Math.round(player.wetness) + "%");
+      if (player.radiation > 12) status.push("radiace");
+      if (state.weather !== "clear") status.push(state.weather === "rain" ? "déšť" : "mlha");
+      ui.statusReadout.textContent = status.length ? "Status: " + status.join(" | ") : "Status: OK";
+      updateCompass();
+      const now = performance.now();
+      if (now - lastMiniMapDraw > 160) {
+        drawMiniMap(false);
+        lastMiniMapDraw = now;
+      }
+    }
+
+    function setBar(bar, text, value, max) {
+      const pct = clamp(value / (max || 100) * 100, 0, 100);
+      bar.style.width = pct + "%";
+      text.textContent = Math.round(value);
+    }
+
+    function renderHotbar() {
+      ui.hotbar.innerHTML = "";
+      hotbar.forEach(function (tool, index) {
+        const slot = document.createElement("div");
+        slot.className = "slot" + (index === player.selectedSlot ? " active" : "");
+        const locked = !hasItem(tool.id);
+        slot.innerHTML =
+          "<div>" + (index + 1) + "</div>" +
+          "<div class='slotIcon'>" + (locked ? "+" : tool.icon) + "</div>" +
+          "<div>" + (locked ? "Locked" : tool.name) + "</div>";
+        ui.hotbar.appendChild(slot);
+      });
+    }
+
+    function renderInventory() {
+      if (!ui.inventoryGrid) return;
+      ui.inventoryGrid.innerHTML = "";
+      Object.keys(itemInfo).forEach(function (key) {
+        const amount = player.inventory[key] || 0;
+        if (amount <= 0) return;
+        const tile = document.createElement("div");
+        tile.className = "itemTile";
+        tile.innerHTML =
+          "<div class='itemIconBig'>" + itemInfo[key][1] + "</div>" +
+          "<strong>" + itemInfo[key][0] + "</strong>" +
+          "<div class='tileMeta'>x" + amount + "</div>";
+        ui.inventoryGrid.appendChild(tile);
+      });
+    }
+
+    function renderCrafting() {
+      ui.craftingGrid.innerHTML = "";
+      recipes.forEach(function (recipe) {
+        const can = canAfford(recipe.cost);
+        const tile = document.createElement("div");
+        tile.className = "recipeTile" + (can ? " can" : "");
+        tile.innerHTML =
+          "<div class='itemIconBig'>" + recipe.icon + "</div>" +
+          "<strong>" + recipe.name + "</strong>" +
+          "<div class='tileMeta'>" + recipe.desc + "</div>" +
+          "<div class='tileMeta'>Potřeba: " + costText(recipe.cost) + "</div>";
+        tile.addEventListener("click", function () { craft(recipe); });
+        ui.craftingGrid.appendChild(tile);
+      });
+    }
+
+    function renderBuildMenu() {
+      ui.buildGrid.innerHTML = "";
+      buildPieces.forEach(function (piece) {
+        const tile = document.createElement("div");
+        tile.className = "buildTile" + (state.selectedBuild === piece.id ? " active" : "");
+        tile.innerHTML =
+          "<div class='itemIconBig'>" + piece.icon + "</div>" +
+          "<strong>" + piece.name + "</strong>" +
+          "<div class='tileMeta'>" + piece.desc + "</div>" +
+          "<div class='tileMeta'>Potřeba: " + costText(piece.cost) + "</div>";
+        tile.addEventListener("click", function () {
+          state.selectedBuild = piece.id;
+          state.buildMode = true;
+          updateBuildGhostShape(true);
+          renderBuildMenu();
+          showMessage("Vybráno: " + piece.name);
+        });
+        ui.buildGrid.appendChild(tile);
+      });
+    }
+
+    function craft(recipe) {
+      if (!canAfford(recipe.cost)) {
+        showMessage("Chybí: " + costText(recipe.cost));
+        return;
+      }
+      spend(recipe.cost);
+      addItem(recipe.id, recipe.amount || 1);
+      showMessage("Vycraftěno: " + recipe.name);
+      renderAllUi();
+      refreshHeldTool();
+    }
+
+    function hasItem(key) {
+      return (player.inventory[key] || 0) > 0;
+    }
+
+    function addItem(key, amount) {
+      player.inventory[key] = (player.inventory[key] || 0) + amount;
+      addFeed((itemInfo[key]?.[1] || "•") + " " + (itemInfo[key]?.[0] || key) + " +" + amount);
+    }
+
+    function consumeItem(key, amount) {
+      if ((player.inventory[key] || 0) < amount) return false;
+      player.inventory[key] -= amount;
+      return true;
+    }
+
+    function canAfford(cost) {
+      return Object.keys(cost).every(function (key) {
+        return (player.inventory[key] || 0) >= cost[key];
+      });
+    }
+
+    function spend(cost) {
+      Object.keys(cost).forEach(function (key) {
+        player.inventory[key] -= cost[key];
+      });
+    }
+
+    function costText(cost) {
+      return Object.keys(cost).map(function (key) {
+        return (itemInfo[key]?.[0] || key) + " x" + cost[key];
+      }).join(", ");
+    }
+
+    function lootText(loot) {
+      return Object.keys(loot || {}).filter(function (key) { return loot[key] > 0; }).map(function (key) {
+        return (itemInfo[key]?.[0] || key) + " +" + loot[key];
+      }).join(", ") || "nic";
+    }
+
+    function addFeed(text) {
+      const div = document.createElement("div");
+      div.className = "feedItem";
+      div.textContent = text;
+      ui.feed.prepend(div);
+      setTimeout(function () { div.remove(); }, 3600);
+      while (ui.feed.children.length > 5) ui.feed.lastChild.remove();
+    }
+
+    function showMessage(text) {
+      ui.centerMessage.textContent = text;
+      ui.centerMessage.classList.remove("hidden");
+      clearTimeout(state.messageTimer);
+      state.messageTimer = setTimeout(function () {
+        ui.centerMessage.classList.add("hidden");
+      }, 2600);
+    }
+
+    function respawnPlayer() {
+      player.health = 100;
+      player.hunger = 72;
+      player.thirst = 72;
+      player.stamina = 100;
+      player.wetness = 0;
+      player.radiation = 0;
+      const p = player.respawn || { x: -24, z: 32 };
+      placePlayer(p.x, p.z);
+      showMessage(player.respawn ? "Respawn u sleeping bagu." : "Respawn na pláži.");
+    }
+
+    function createCompass() {
+      ui.compassTrack.innerHTML = "";
+      for (let deg = 0; deg <= 720; deg += 10) {
+        const real = deg % 360;
+        const div = document.createElement("div");
+        let label = "";
+        if (real === 0) label = "N";
+        else if (real === 90) label = "E";
+        else if (real === 180) label = "S";
+        else if (real === 270) label = "W";
+        else if (real % 30 === 0) label = String(real);
+        div.className = "mark" + (label.length ? " big" : "");
+        div.textContent = label;
+        ui.compassTrack.appendChild(div);
+      }
+    }
+
+    function updateCompass() {
+      const deg = ((-player.yaw / DEG) % 360 + 360) % 360;
+      const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      ui.compassLabel.textContent = directions[Math.round(deg / 45) % 8] + " " + Math.round(deg) + "°";
+      ui.compassTrack.style.transform = "translateX(" + (-deg * 6 - 1080) + "px)";
+    }
+
+    function drawMiniMap(force) {
+      if (!miniMapCtx) return;
+      drawMap(miniMapCtx, ui.miniMapCanvas.width, true);
+    }
+
+    function drawBigMap() {
+      if (!bigMapCtx) return;
+      drawMap(bigMapCtx, ui.bigMapCanvas.width, false);
+    }
+
+    function drawMap(ctx, size, small) {
+      const center = size / 2;
+      const radius = size * 0.43;
+      const scale = radius / WORLD_RADIUS;
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = "#07111d";
+      ctx.fillRect(0, 0, size, size);
+      ctx.beginPath();
+      ctx.arc(center, center, radius * 1.08, 0, Math.PI * 2);
+      ctx.fillStyle = "#1c5f87";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(center, center, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#3f7b3d";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(center, center, radius * 0.64, 0, Math.PI * 2);
+      ctx.fillStyle = "#356c34";
+      ctx.fill();
+
+      mountainZones.forEach(function (zone) {
+        drawMountainZoneMap(ctx, zone, center, scale, small);
+      });
+
+      if (!small) drawGrid(ctx, center, scale, size);
+
+      riverPaths.forEach(function (path) { drawPath(ctx, path, center, scale, "#246d89", small ? 5 : 11); });
+      riverPaths.forEach(function (path) { drawPath(ctx, path, center, scale, "#48b6e3", small ? 3 : 6); });
+
+      ponds.forEach(function (pond) {
+        const p = worldToMap(pond.x, pond.z, center, scale);
+        ctx.fillStyle = "#48b6e3";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pond.r * scale, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      roads.forEach(function (path) { drawPath(ctx, path, center, scale, "#20262d", small ? 3 : 7); });
+      roads.forEach(function (path) { drawPath(ctx, path, center, scale, "#34383f", small ? 2 : 4); });
+      bridges.forEach(function (bridge) { drawBridgeMap(ctx, bridge, center, scale, small); });
+
+      markers.slice(0, small ? 160 : markers.length).forEach(function (m) {
+        if (small && !["monument", "rad", "bridge", "respawn", "build"].includes(m.kind)) return;
+        const p = worldToMap(m.x, m.z, center, scale);
+        ctx.fillStyle = markerColor(m.kind);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, m.kind === "monument" || m.kind === "rad" ? (small ? 3 : 6) : (small ? 2 : 4), 0, Math.PI * 2);
+        ctx.fill();
+        if (!small && ["monument", "rad", "respawn", "bridge"].includes(m.kind)) {
+          ctx.fillStyle = "#edf4f9";
+          ctx.font = "12px Arial";
+          ctx.fillText(m.label, p.x + 8, p.y + 4);
+        }
+      });
+
+      if (state.waypoint) {
+        const wp = worldToMap(state.waypoint.x, state.waypoint.z, center, scale);
+        ctx.strokeStyle = "#ef5b48";
+        ctx.lineWidth = small ? 2 : 4;
+        ctx.beginPath();
+        ctx.moveTo(wp.x - 7, wp.y - 7);
+        ctx.lineTo(wp.x + 7, wp.y + 7);
+        ctx.moveTo(wp.x + 7, wp.y - 7);
+        ctx.lineTo(wp.x - 7, wp.y + 7);
+        ctx.stroke();
+      }
+
+      const p = worldToMap(player.x, player.z, center, scale);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(-player.yaw);
+      ctx.fillStyle = "#ffe18a";
+      ctx.beginPath();
+      ctx.moveTo(0, small ? -8 : -12);
+      ctx.lineTo(small ? 5 : 8, small ? 7 : 11);
+      ctx.lineTo(0, small ? 4 : 7);
+      ctx.lineTo(small ? -5 : -8, small ? 7 : 11);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGrid(ctx, center, scale, size) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      for (let v = -300; v <= 300; v += 100) {
+        const a = worldToMap(v, -WORLD_RADIUS, center, scale);
+        const b = worldToMap(v, WORLD_RADIUS, center, scale);
+        const c = worldToMap(-WORLD_RADIUS, v, center, scale);
+        const d = worldToMap(WORLD_RADIUS, v, center, scale);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.moveTo(c.x, c.y);
+        ctx.lineTo(d.x, d.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawPath(ctx, path, center, scale, color, width) {
+      if (path.length < 2) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      path.forEach(function (point, index) {
+        const p = worldToMap(point.x, point.z, center, scale);
+        if (index === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+    }
+
+    function drawBridgeMap(ctx, bridge, center, scale, small) {
+      const fx = Math.sin(bridge.angle);
+      const fz = Math.cos(bridge.angle);
+      const a = worldToMap(bridge.x - fx * bridge.length * 0.5, bridge.z - fz * bridge.length * 0.5, center, scale);
+      const b = worldToMap(bridge.x + fx * bridge.length * 0.5, bridge.z + fz * bridge.length * 0.5, center, scale);
+      ctx.strokeStyle = "#e9b94f";
+      ctx.lineWidth = small ? 4 : 9;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.strokeStyle = "#3f2b17";
+      ctx.lineWidth = small ? 2 : 4;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    function drawMountainZoneMap(ctx, zone, center, scale, small) {
+      const p = worldToMap(zone.x, zone.z, center, scale);
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(zone.angle);
+      ctx.fillStyle = small ? "rgba(120,130,108,0.5)" : "rgba(118,126,103,0.62)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, zone.rx * scale, zone.rz * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(236,238,220,0.12)";
+      ctx.lineWidth = small ? 1 : 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function markerColor(kind) {
+      return {
+        monument: "#f5f7fb",
+        rad: "#ef5b48",
+        bridge: "#e9b94f",
+        road: "#20262d",
+        water: "#48b6e3",
+        resource: "#75c878",
+        loot: "#78b6dd",
+        food: "#99d777",
+        animal: "#d8a63f",
+        build: "#d8a63f",
+        respawn: "#f472b6"
+      }[kind] || "#edf4f9";
+    }
+
+    function worldToMap(x, z, center, scale) {
+      return { x: center + x * scale, y: center + z * scale };
+    }
+
+    function mapToWorld(x, y, size) {
+      const center = size / 2;
+      const radius = size * 0.43;
+      const scale = radius / WORLD_RADIUS;
+      return { x: (x - center) / scale, z: (y - center) / scale };
+    }
+
+    function rotate(x, z, angle) {
+      return {
+        x: x * Math.cos(angle) - z * Math.sin(angle),
+        z: x * Math.sin(angle) + z * Math.cos(angle)
+      };
+    }
+
+    function saveGame() {
+      const save = {
+        version: VERSION,
+        player: {
+          x: player.x,
+          z: player.z,
+          yaw: player.yaw,
+          pitch: player.pitch,
+          health: player.health,
+          hunger: player.hunger,
+          thirst: player.thirst,
+          stamina: player.stamina,
+          wetness: player.wetness,
+          radiation: player.radiation,
+          selectedSlot: player.selectedSlot,
+          respawn: player.respawn,
+          inventory: player.inventory
+        },
+        state: {
+          weather: state.weather,
+          weatherTimer: state.weatherTimer,
+          day: state.day,
+          waypoint: state.waypoint,
+          selectedBuild: state.selectedBuild,
+          buildRotation: state.buildRotation
+        }
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+      state.lastSave = performance.now();
+      showMessage("Hra uložená.");
+      renderMenuSaveState();
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) {
+        showMessage("Žádný save pro Beta 0.7.0.");
+        return false;
+      }
+      try {
+        const save = JSON.parse(raw);
+        if (!save || save.version !== VERSION) throw new Error("version");
+        Object.assign(player.inventory, save.player.inventory || {});
+        player.health = save.player.health;
+        player.hunger = save.player.hunger;
+        player.thirst = save.player.thirst;
+        player.stamina = save.player.stamina;
+        player.wetness = save.player.wetness;
+        player.radiation = save.player.radiation;
+        player.yaw = save.player.yaw;
+        player.pitch = save.player.pitch;
+        player.selectedSlot = save.player.selectedSlot || 0;
+        player.respawn = save.player.respawn || null;
+        state.weather = save.state.weather || "clear";
+        state.weatherTimer = save.state.weatherTimer || 80;
+        state.day = save.state.day || state.day;
+        state.waypoint = save.state.waypoint || null;
+        state.selectedBuild = save.state.selectedBuild || "foundation";
+        state.buildRotation = save.state.buildRotation || 0;
+        placePlayer(save.player.x, save.player.z);
+        refreshHeldTool();
+        showMessage("Save načtený.");
+        return true;
+      } catch (error) {
+        showMessage("Save nejde načíst pro tuhle verzi.");
+        return false;
+      }
+    }
+
+    function maybeAutoSave() {
+      const now = performance.now();
+      if (now - state.lastSave > 60000) saveGame();
+    }
+
+    function syncSettingsUi() {
+      ui.renderScaleInput.value = settings.renderScale;
+      ui.renderScaleLabel.textContent = settings.renderScale.toFixed(2) + "x";
+      ui.densityInput.value = settings.density;
+      ui.densityLabel.textContent = ["low", "medium", "high"][settings.density];
+      ui.toggleShadows.textContent = "Stíny: " + (settings.shadows ? "zapnuto" : "vypnuto");
+      ui.toggleFog.textContent = "Mlha: " + (settings.fog ? "zapnuto" : "vypnuto");
+      ui.toggleBob.textContent = "Camera bob: " + (settings.bob ? "zapnuto" : "vypnuto");
+    }
+
+    function applySettings() {
+      if (renderer) {
+        renderer.setPixelRatio(devicePixelRatioForSettings());
+        renderer.shadowMap.enabled = settings.shadows;
+      }
+      if (scene) {
+        scene.fog = settings.fog ? new THREE.Fog(scene.background || 0x88b5dc, 145, 760) : null;
+      }
+      if (sunLight) sunLight.castShadow = settings.shadows;
+    }
+
+    function devicePixelRatioForSettings() {
+      return Math.min(window.devicePixelRatio || 1, 1.7) * settings.renderScale;
+    }
+
+    function getBuildPiece(id) {
+      return buildPieces.find(function (piece) { return piece.id === id; });
+    }
+
+    function onResize() {
+      if (!renderer || !camera) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(devicePixelRatioForSettings());
+    }
+
+    function animate() {
+      animationId = requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      update(dt);
+      renderer.render(scene, camera);
+      fpsAccum += dt;
+      fpsFrames++;
+      if (fpsAccum > 0.5) {
+        currentFps = Math.round(fpsFrames / fpsAccum);
+        fpsAccum = 0;
+        fpsFrames = 0;
+      }
+    }
+
+    function boot() {
+      cacheUi();
+      bindUi();
+      syncSettingsUi();
+      renderMenuSaveState();
+      ui.centerMessage.classList.add("hidden");
+      window.FW_DEBUG = {
+        probeSurface: function (x, z) {
+          return {
+            surface: surfaceLabelAt(x, z),
+            depth: waterDepthAt(x, z),
+            waterY: Number(waterSurfaceHeightAt(x, z).toFixed(2)),
+            bridge: !!getBridgeAt(x, z, 0.2),
+            road: nearestPathDistance(x, z, roads) < 7.8,
+            height: Number(surfaceHeight(x, z).toFixed(2))
+          };
+        },
+        player: function () {
+          return this.probeSurface(player.x, player.z);
+        },
+        auditTerrain: function (limit) {
+          const max = limit || terrainAuditSamples.length;
+          return terrainAuditSamples.slice(0, max).map(function (sample) {
+            const probe = window.FW_DEBUG.probeSurface(sample.x, sample.z);
+
+            return {
+              name: sample.name,
+              kind: sample.kind,
+              x: Number(sample.x.toFixed(1)),
+              z: Number(sample.z.toFixed(1)),
+              surface: probe.surface,
+              depth: probe.depth,
+              height: probe.height,
+              waterY: probe.waterY
+            };
+          });
+        },
+        waterMismatchReport: function () {
+          const report = {
+            checked: terrainAuditSamples.length,
+            waterWithoutVisual: 0,
+            bridgeWet: 0,
+            samples: []
+          };
+
+          terrainAuditSamples.forEach(function (sample) {
+            const probe = window.FW_DEBUG.probeSurface(sample.x, sample.z);
+            const riverVisual = nearestPathDistance(sample.x, sample.z, riverPaths) < 17.5;
+            const pondVisual = ponds.some(function (pond) {
+              return dist2(sample.x, sample.z, pond.x, pond.z) < pond.r;
+            });
+            const oceanVisual = Math.hypot(sample.x, sample.z) > WORLD_RADIUS - 12;
+            const visibleWater = riverVisual || pondVisual || oceanVisual;
+
+            if (probe.depth > 0.2 && !visibleWater && !probe.bridge) {
+              report.waterWithoutVisual += 1;
+              if (report.samples.length < 12) report.samples.push({ name: sample.name, probe: probe });
+            }
+
+            if (sample.kind === "bridge" && probe.depth > 0.2) {
+              report.bridgeWet += 1;
+              if (report.samples.length < 12) report.samples.push({ name: sample.name, probe: probe });
+            }
+          });
+
+          return report;
+        }
+      };
+    }
+
+    boot();
+  </script>
+</body>
+</html>
