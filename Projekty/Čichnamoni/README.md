@@ -42,23 +42,23 @@ Obsahuje:
 
 ## Dostupní Čichnamoni
 
-### Cichnak
+### Grosik
 
 - Zdraví: 100
-- Základní útok: Kopnutí
-- Speciální útok: Mega úder
+- Základní útok: Zbytečná otázka
+- Speciální útok: Přepadovka
 
-### Brnak
+### Pan M
 
 - Zdraví: 90
-- Základní útok: Plácnutí
-- Speciální útok: Kousnutí
+- Základní útok: Hádání
+- Speciální útok: Písemka
 
-### Ajťák
+### Prokorný
 
 - Zdraví: 80
-- Základní útok: Kopnutí
-- Speciální útok: Kousnutí
+- Základní útok: Malta
+- Speciální útok: BrnoTU
 
 ## Jak hrát
 

@@ -14,23 +14,27 @@ class Program
 
             if (volbaMenu == 1)
             {
-                Utok kopnuti = new Utok("Kopnuti", 10);
-                Utok kousnuti = new Utok("Kousnuti", 15);
-                Utok placnuti = new Utok("Placnuti", 8);
-                Utok megaUder = new Utok("Mega uder", 20);
+                Utok zbytecnaOtazka = new Utok("Zbytecna otazka", 10);
+                Utok prepadovka = new Utok("Prepadovka", 20);
 
-                Cichnamon cichnak = new Cichnamon("Cichnak", 100, kopnuti, megaUder);
-                Cichnamon brnak = new Cichnamon("Brnak", 90, placnuti, kousnuti);
-                Cichnamon ajtak = new Cichnamon("Ajtak", 80, kopnuti, kousnuti);
+                Utok hadani = new Utok("Hadani", 8);
+                Utok pisemka = new Utok("Pisemka", 15);
+
+                Utok malta = new Utok("Malta", 10);
+                Utok brnoTU = new Utok("BrnoTU", 15);
+
+                Cichnamon grosik = new Cichnamon("Grosik", 100, zbytecnaOtazka, prepadovka);
+                Cichnamon panM = new Cichnamon("Pan M", 90, hadani, pisemka);
+                Cichnamon prokorny = new Cichnamon("Prokorny", 80, malta, brnoTU);
 
                 Console.WriteLine("Zadej jmeno trenera:");
                 string jmeno = Console.ReadLine();
 
                 Trener hrac = new Trener(jmeno);
 
-                hrac.PridatCichnamona(cichnak);
-                hrac.PridatCichnamona(brnak);
-                hrac.PridatCichnamona(ajtak);
+                hrac.PridatCichnamona(grosik);
+                hrac.PridatCichnamona(panM);
+                hrac.PridatCichnamona(prokorny);
 
                 Console.WriteLine("Vyber si Cichnamona:");
                 hrac.VypisCichnamony();
