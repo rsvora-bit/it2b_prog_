@@ -54,11 +54,10 @@ class Cichnamon
 
     public void VypisInfo()
     {
-        
         Console.WriteLine("Cichnamon: " + Jmeno);
         Console.WriteLine("Zdravi: " + Zdravi + "/" + MaxZdravi);
         Console.WriteLine("Zakladni utok: " + ZakladniUtok.Nazev);
         Console.WriteLine("Specialni utok: " + SpecialniUtok.Nazev);
-        
+        Console.WriteLine();
     }
 }

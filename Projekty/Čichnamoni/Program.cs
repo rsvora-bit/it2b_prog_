@@ -9,6 +9,7 @@ class Program
             Console.WriteLine("---- Cichnamoni ----");
             Console.WriteLine("1) Hrat");
             Console.WriteLine("2) Konec");
+            Console.WriteLine();
 
             int volbaMenu = int.Parse(Console.ReadLine());
 
@@ -36,15 +37,27 @@ class Program
                 hrac.PridatCichnamona(panM);
                 hrac.PridatCichnamona(prokorny);
 
+                Console.WriteLine();
                 Console.WriteLine("Vyber si Cichnamona:");
                 hrac.VypisCichnamony();
 
                 int volba = int.Parse(Console.ReadLine());
-                hrac.VyberCichnamona(volba);
 
-                Cichnamon protivnik = new Cichnamon("Nepritel", 100, placnuti, megaUder);
+                while (volba < 1 || volba > hrac.Cichnamoni.Count)
+                {
+                    Console.WriteLine("Neplatna volba, zadej znovu:");
+                    volba = int.Parse(Console.ReadLine());
+                }
+
+                hrac.VyberCichnamona(volba - 1);
+
+                Cichnamon protivnik = new Cichnamon("Nepritel", 100, hadani, pisemka);
 
                 bool leceni = true;
+
+                Console.WriteLine();
+                Console.WriteLine("Souboj zacina!");
+                Console.WriteLine();
 
                 while (hrac.Vybrany.JeNazivu() && protivnik.JeNazivu())
                 {
@@ -58,8 +71,11 @@ class Program
                     Console.WriteLine("1) Zakladni utok");
                     Console.WriteLine("2) Specialni utok");
                     Console.WriteLine("3) Leceni");
+                    Console.WriteLine();
 
                     int akce = int.Parse(Console.ReadLine());
+
+                    Console.WriteLine();
 
                     if (akce == 1)
                     {
@@ -75,18 +91,31 @@ class Program
                         {
                             hrac.Vybrany.Uzdrav(20);
                             leceni = false;
-                            Console.WriteLine("Cichnamon se vylecil");
+                            Console.WriteLine(hrac.Vybrany.Jmeno + " se vylecil");
                         }
                         else
                         {
                             Console.WriteLine("Leceni uz bylo pouzito");
                         }
                     }
+                    else
+                    {
+                        Console.WriteLine("Neplatna akce");
+                    }
+
+                    Console.WriteLine();
 
                     if (protivnik.JeNazivu())
                     {
+                        Console.WriteLine("Protivnik utoci:");
                         protivnik.Zautoc(hrac.Vybrany);
                     }
+
+                    Console.WriteLine();
+                    Console.WriteLine("Stav po tahu:");
+                    Console.WriteLine("Ty: " + hrac.Vybrany.Jmeno + " - " + hrac.Vybrany.Zdravi + "/" + hrac.Vybrany.MaxZdravi);
+                    Console.WriteLine("Protivnik: " + protivnik.Jmeno + " - " + protivnik.Zdravi + "/" + protivnik.MaxZdravi);
+                    Console.WriteLine();
                 }
 
                 if (hrac.Vybrany.JeNazivu())
@@ -99,10 +128,17 @@ class Program
                 {
                     Console.WriteLine("Prohral jsi");
                 }
+
+                Console.WriteLine();
             }
             else if (volbaMenu == 2)
             {
                 zapnuto = false;
+            }
+            else
+            {
+                Console.WriteLine("Neplatna volba");
+                Console.WriteLine();
             }
         }
 

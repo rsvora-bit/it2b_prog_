@@ -27,7 +27,7 @@ class Trener
     {
         for (int i = 0; i < Cichnamoni.Count; i++)
         {
-            Console.WriteLine(i + ") " + Cichnamoni[i].Jmeno);
+            Console.WriteLine((i + 1) + ") " + Cichnamoni[i].Jmeno);
         }
     }
 
